@@ -10,10 +10,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -268,12 +265,11 @@ fun HomeScreen(
 private fun UpdateDialogs(viewModel: MainViewModel) {
     val context = LocalContext.current
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
-    var dismissed by rememberSaveable { mutableStateOf(false) }
 
     when (val state = updateState) {
-        is UpdateState.Available -> if (!dismissed) {
+        is UpdateState.Available -> {
             AlertDialog(
-                onDismissRequest = { dismissed = true },
+                onDismissRequest = { viewModel.resetUpdateState() },
                 title = { Text(stringResource(R.string.update_available_title)) },
                 text = {
                     Column {
@@ -297,12 +293,11 @@ private fun UpdateDialogs(viewModel: MainViewModel) {
                 confirmButton = {
                     TextButton(onClick = {
                         HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                        dismissed = true
                         viewModel.downloadUpdate()
                     }) { Text(stringResource(R.string.update_download)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { dismissed = true }) {
+                    TextButton(onClick = { viewModel.resetUpdateState() }) {
                         Text(stringResource(R.string.cancel))
                     }
                 }
