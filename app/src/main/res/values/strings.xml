@@ -3,7 +3,7 @@
 
     <!-- HomeScreen -->
     <string name="nav_home">Главная</string>
-    <string name="turn_proxy_title">Turn Proxy</string>
+    <string name="turn_proxy_title">Turn Proxy (WP)</string>
     <string name="info_desc">Информация</string>
     <string name="proxy_active">Прокси активен</string>
     <string name="proxy_connecting">Подключение…</string>
@@ -117,9 +117,9 @@
     <string name="step_ssh_check">Проверка SSH…</string>
 
     <!-- OnboardingScreen -->
-    <string name="onboarding_title">Turn Proxy</string>
-    <string name="onboarding_subtitle">Проксируйте WireGuard и Hysteria‑трафик\nчерез TURN‑серверы VK Calls</string>
-    <string name="privacy_notice">Мы не собираем никаких данных. Все настройки (SSH-доступ, параметры прокси) хранятся исключительно на вашем устройстве.</string>
+    <string name="onboarding_title">Turn Proxy with Wireproxy</string>
+    <string name="onboarding_subtitle">Проксируйте WireGuard‑трафик\nчерез TURN‑серверы VK Calls</string>
+    <string name="mod_by_speakpresents">mod by speakpresents</string>
     <string name="setup_server">Настроить сервер</string>
     <string name="skip_setup">Пропустить настройки</string>
 
