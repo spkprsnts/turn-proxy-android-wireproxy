@@ -34,8 +34,13 @@
 
     <!-- WireproxyConfigScreen -->
     <string name="wireproxy_title">Wireproxy</string>
-    <string name="wireproxy_config_title">WireGuard Конфигурация</string>
-    <string name="wireproxy_import_config">Импорт конфигурации</string>
+    <string name="wireproxy_config_title">Конфигурация WireGuard</string>
+    <string name="wireproxy_import_config">Импорт</string>
+    <string name="wireproxy_import_file">Из файла</string>
+    <string name="wireproxy_import_clipboard">Из буфера</string>
+    <string name="wireproxy_import_success">Конфигурация импортирована</string>
+    <string name="wireproxy_import_error">Ошибка импорта</string>
+    <string name="wireproxy_save_success">Сохранено в wg.conf</string>
     <string name="wireproxy_proxy_addresses">Адреса прокси</string>
     <string name="wireproxy_http">HTTP</string>
     <string name="wireproxy_socks5">SOCKS5</string>

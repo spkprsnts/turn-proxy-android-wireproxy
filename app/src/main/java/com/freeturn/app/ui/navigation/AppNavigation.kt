@@ -43,6 +43,7 @@ import com.freeturn.app.viewmodel.MainViewModel
 object Routes {
     const val ONBOARDING = "onboarding"
     const val WIREGUARD_CONFIG = "wireguard_config"
+    const val WIREGUARD_CONFIG_OB = "wireguard_config_onboarding"
     const val CLIENT_SETUP = "client_setup"
     const val CLIENT_SETUP_OB = "client_setup_onboarding"
     const val HOME = "home"
@@ -112,6 +113,18 @@ fun AppNavigation(viewModel: MainViewModel) {
                             viewModel.setOnboardingDone()
                             navController.navigate(Routes.HOME) {
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+
+                composable(Routes.WIREGUARD_CONFIG_OB) {
+                    WireproxyConfigScreen(
+                        viewModel = viewModel,
+                        showFinishButton = true,
+                        onFinish = {
+                            navController.navigate(Routes.CLIENT_SETUP_OB) {
                                 launchSingleTop = true
                             }
                         }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import com.freeturn.app.ProxyService
+import com.freeturn.app.WireproxyService
 import com.freeturn.app.ProxyServiceState
 import com.freeturn.app.StartupResult
 import com.freeturn.app.data.ClientConfig
@@ -88,11 +89,17 @@ class LocalProxyManager(private val context: Context) {
 
         ProxyServiceState.clearLogs()
         ProxyServiceState.setStartupResult(null)
+        
+        // Start both services: vk-turn-proxy and wireproxy
         val intent = Intent(context, ProxyService::class.java)
+        val wireproxyIntent = Intent(context, WireproxyService::class.java)
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
+            context.startForegroundService(wireproxyIntent)
         } else {
             context.startService(intent)
+            context.startService(wireproxyIntent)
         }
 
         val result = withTimeoutOrNull(5_000L) {
@@ -113,6 +120,7 @@ class LocalProxyManager(private val context: Context) {
 
     fun stopProxy() {
         context.stopService(Intent(context, ProxyService::class.java))
+        context.stopService(Intent(context, WireproxyService::class.java))
         _proxyState.value = ProxyState.Idle
     }
 

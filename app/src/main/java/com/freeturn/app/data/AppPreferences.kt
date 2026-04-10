@@ -18,28 +18,6 @@ import androidx.core.content.edit
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_prefs")
 
-//data class WireproxyConfig(
-//    val wgInterface: Interface = Interface(),
-//    val peer: Peer = Peer()
-//) {
-//    data class Interface(
-//        val privateKey: String = "",
-//        val address: String = "",
-//        val dns: String = "1.1.1.1",
-//        val mtu: Int = 1280,
-//
-//        val listenPort: Int = 25344, // Порт, на котором wireproxy поднимет SOCKS5/HTTP
-//        val listenAddress: String = "127.0.0.1"
-//    )
-//
-//    data class Peer(
-//        val publicKey: String = "",
-//        val endpoint: String = "",
-//        val allowedIPs: String = "0.0.0.0/0, ::/0",
-//        val persistentKeepalive: Int = 25
-//    )
-//}
-
 data class ClientConfig(
     val serverAddress: String = "",
     val vkLink: String = "",
