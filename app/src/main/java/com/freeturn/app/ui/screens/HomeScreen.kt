@@ -491,27 +491,27 @@ private fun InfoBottomSheet(
             )
         }
 
-        item { HorizontalDivider() }
-
-        // Обновление
-        item {
-            UpdateListItem(
-                state = updateState,
-                colors = listColors,
-                onCheck = {
-                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                    viewModel.checkForUpdate()
-                },
-                onDownload = {
-                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                    viewModel.downloadUpdate()
-                },
-                onInstall = {
-                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                    viewModel.installUpdate()
-                }
-            )
-        }
+//        item { HorizontalDivider() }
+//
+//        // Обновление
+//        item {
+//            UpdateListItem(
+//                state = updateState,
+//                colors = listColors,
+//                onCheck = {
+//                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+//                    viewModel.checkForUpdate()
+//                },
+//                onDownload = {
+//                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+//                    viewModel.downloadUpdate()
+//                },
+//                onInstall = {
+//                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+//                    viewModel.installUpdate()
+//                }
+//            )
+//        }
 
         item { HorizontalDivider() }
 

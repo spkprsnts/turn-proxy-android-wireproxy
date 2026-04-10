@@ -51,9 +51,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         proxyManager.syncInitialState()
 
         // Автоматическая проверка обновлений при холодном запуске (silent — без ошибок)
-        viewModelScope.launch {
-            appUpdater.checkForUpdate(silent = true)
-        }
+//        viewModelScope.launch {
+//            appUpdater.checkForUpdate(silent = true)
+//        }
     }
 
     override fun onCleared() {
