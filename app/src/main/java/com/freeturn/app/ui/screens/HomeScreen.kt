@@ -100,7 +100,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val proxyState by viewModel.proxyState.collectAsStateWithLifecycle()
     val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
-    val isConfigured = clientConfig.serverAddress.isNotBlank() || clientConfig.isRawMode
+    val isConfigured = clientConfig.serverAddress.isNotBlank() || (clientConfig.isRawMode && clientConfig.rawCommand.isNotBlank())
 
     // Запрос разрешений при первом открытии главного экрана
     val batteryOptLauncher = rememberLauncherForActivityResult(
@@ -169,6 +169,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(40.dp))
@@ -230,43 +231,35 @@ fun HomeScreen(
                             )
                             Spacer(Modifier.height(4.dp))
 
-                            if (clientConfig.rawCommand.isNotBlank()) {
-                                // Разбираем rawCommand с группировкой параметров и значений
-                                val parts = clientConfig.rawCommand.split("\\s+".toRegex())
-                                    .filter { it.isNotBlank() }
-                                val args = mutableListOf<String>()
-                                var i = 0
-                                while (i < parts.size) {
-                                    val part = parts[i]
-                                    if (part.startsWith("-") && i + 1 < parts.size && !parts[i + 1].startsWith(
-                                            "-"
-                                        )
-                                    ) {
-                                        // Параметр с значением: объединяем в одну строку
-                                        args.add("$part ${parts[i + 1]}")
-                                        i += 2
-                                    } else {
-                                        // Флаг без значения или одиночный элемент
-                                        args.add(part)
-                                        i += 1
-                                    }
+                            // Разбираем rawCommand с группировкой параметров и значений
+                            val parts = clientConfig.rawCommand.split("\\s+".toRegex())
+                                .filter { it.isNotBlank() }
+                            val args = mutableListOf<String>()
+                            var i = 0
+                            while (i < parts.size) {
+                                val part = parts[i]
+                                if (part.startsWith("-") && i + 1 < parts.size && !parts[i + 1].startsWith(
+                                        "-"
+                                    )
+                                ) {
+                                    // Параметр с значением: объединяем в одну строку
+                                    args.add("$part ${parts[i + 1]}")
+                                    i += 2
+                                } else {
+                                    // Флаг без значения или одиночный элемент
+                                    args.add(part)
+                                    i += 1
                                 }
-                                Column {
-                                    args.forEach { arg ->
-                                        Text(
-                                            arg,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                        Spacer(Modifier.height(4.dp))  // Небольшой отступ между аргументами
-                                    }
+                            }
+                            Column {
+                                args.forEach { arg ->
+                                    Text(
+                                        arg,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                    Spacer(Modifier.height(4.dp))  // Небольшой отступ между аргументами
                                 }
-                            } else {
-                                Text(
-                                    stringResource(R.string.raw_command_empty),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
                             }
                         } else {
                             ConfigRow(

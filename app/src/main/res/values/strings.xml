@@ -37,7 +37,6 @@
     <string name="connection_title">Подключение</string>
     <string name="raw_mode">Raw Mode</string>
     <string name="raw_mode_desc">Ввод аргументов вручную</string>
-    <string name="raw_command_empty">Аргументы запуска не введены</string>
     <string name="server_address_label">Адрес vk-turn-proxy сервера</string>
     <string name="server_address_placeholder">1.2.3.4:56000</string>
     <string name="server_address_support">IP и порт vk-turn-proxy на вашем VPS</string>
