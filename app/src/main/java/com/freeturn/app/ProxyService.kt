@@ -119,7 +119,7 @@ class ProxyService : Service() {
         if (cfg.isRawMode) {
             val parts = cfg.rawCommand.trim().split("\\s+".toRegex())
             cmdArgs.add(executable)
-            if (parts.size > 1) cmdArgs.addAll(parts.subList(1, parts.size))
+            if (parts.isNotEmpty()) cmdArgs.addAll(parts.subList(0, parts.size))
         } else {
             cmdArgs.add(executable)
             cmdArgs.add("-peer"); cmdArgs.add(cfg.serverAddress)

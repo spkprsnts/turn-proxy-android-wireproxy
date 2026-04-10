@@ -100,7 +100,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val proxyState by viewModel.proxyState.collectAsStateWithLifecycle()
     val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
-    val isConfigured = clientConfig.serverAddress.isNotBlank()
+    val isConfigured = clientConfig.serverAddress.isNotBlank() || clientConfig.isRawMode
 
     // Запрос разрешений при первом открытии главного экрана
     val batteryOptLauncher = rememberLauncherForActivityResult(
@@ -211,7 +211,7 @@ fun HomeScreen(
             )
 
             if (isConfigured) {
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(20.dp))
 
                 Card(
                     modifier = Modifier
@@ -222,15 +222,69 @@ fun HomeScreen(
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(stringResource(R.string.current_settings), style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(12.dp))
-                        ConfigRow(stringResource(R.string.server), clientConfig.serverAddress.redact(privacyMode))
-                        ConfigRow(stringResource(R.string.threads), "${clientConfig.threads}")
-                        ConfigRow(
-                            stringResource(R.string.transport_protocol),
-                            if (clientConfig.vlessMode) "VLESS"
-                            else if (clientConfig.useUdp) stringResource(R.string.udp)
-                            else stringResource(R.string.tcp)
-                        )
-                        ConfigRow(stringResource(R.string.local_port), clientConfig.localPort.redact(privacyMode))
+                        if (clientConfig.isRawMode) {
+                            Text(
+                                stringResource(R.string.raw_mode),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Spacer(Modifier.height(4.dp))
+
+                            if (clientConfig.rawCommand.isNotBlank()) {
+                                // Разбираем rawCommand с группировкой параметров и значений
+                                val parts = clientConfig.rawCommand.split("\\s+".toRegex())
+                                    .filter { it.isNotBlank() }
+                                val args = mutableListOf<String>()
+                                var i = 0
+                                while (i < parts.size) {
+                                    val part = parts[i]
+                                    if (part.startsWith("-") && i + 1 < parts.size && !parts[i + 1].startsWith(
+                                            "-"
+                                        )
+                                    ) {
+                                        // Параметр с значением: объединяем в одну строку
+                                        args.add("$part ${parts[i + 1]}")
+                                        i += 2
+                                    } else {
+                                        // Флаг без значения или одиночный элемент
+                                        args.add(part)
+                                        i += 1
+                                    }
+                                }
+                                Column {
+                                    args.forEach { arg ->
+                                        Text(
+                                            arg,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                        Spacer(Modifier.height(4.dp))  // Небольшой отступ между аргументами
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    stringResource(R.string.raw_command_empty),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        } else {
+                            ConfigRow(
+                                stringResource(R.string.server),
+                                clientConfig.serverAddress.redact(privacyMode)
+                            )
+                            ConfigRow(stringResource(R.string.threads), "${clientConfig.threads}")
+                            ConfigRow(
+                                stringResource(R.string.transport_protocol),
+                                if (clientConfig.vlessMode) "VLESS"
+                                else if (clientConfig.useUdp) stringResource(R.string.udp)
+                                else stringResource(R.string.tcp)
+                            )
+                            ConfigRow(
+                                stringResource(R.string.local_port),
+                                clientConfig.localPort.redact(privacyMode)
+                            )
+                        }
                     }
                 }
             }
