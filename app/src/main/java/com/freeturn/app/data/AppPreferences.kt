@@ -18,16 +18,6 @@ import androidx.core.content.edit
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_prefs")
 
-data class SshConfig(
-    val ip: String = "",
-    val port: Int = 22,
-    val username: String = "root",
-    val password: String = "",
-    val authType: String = "PASSWORD",
-    val sshKey: String = "",
-    val hostFingerprint: String = ""
-)
-
 data class ClientConfig(
     val serverAddress: String = "",
     val vkLink: String = "",
@@ -48,11 +38,6 @@ class AppPreferences(context: Context) {
     private val context = context.applicationContext
 
     companion object {
-        val SSH_IP = stringPreferencesKey("ssh_ip")
-        val SSH_PORT = intPreferencesKey("ssh_port")
-        val SSH_USER = stringPreferencesKey("ssh_user")
-        val SSH_AUTH_TYPE = stringPreferencesKey("ssh_auth_type")
-        val SSH_HOST_FP = stringPreferencesKey("ssh_host_fp")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val CLIENT_SERVER_ADDR = stringPreferencesKey("client_server_addr")
         val CLIENT_VK_LINK = stringPreferencesKey("client_vk_link")
@@ -68,10 +53,6 @@ class AppPreferences(context: Context) {
         val PROXY_LISTEN = stringPreferencesKey("proxy_listen")
         val PROXY_CONNECT = stringPreferencesKey("proxy_connect")
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
-
-        // Устаревшие ключи — используются только для миграции
-        private val SSH_PASS_LEGACY = stringPreferencesKey("ssh_pass")
-        private val SSH_KEY_LEGACY = stringPreferencesKey("ssh_key")
     }
 
     // Шифрованное хранилище для SSH-пароля и ключа (Android Keystore + AES-256)
@@ -89,23 +70,6 @@ class AppPreferences(context: Context) {
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     }
-
-    val sshConfigFlow: Flow<SshConfig> = context.dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { prefs ->
-            SshConfig(
-                ip = prefs[SSH_IP] ?: "",
-                port = prefs[SSH_PORT] ?: 22,
-                username = prefs[SSH_USER] ?: "root",
-                // Читаем из зашифрованного хранилища; если пусто — берём из DataStore (миграция)
-                password = encryptedPrefs.getString("ssh_pass", null)
-                    ?: prefs[SSH_PASS_LEGACY] ?: "",
-                authType = prefs[SSH_AUTH_TYPE] ?: "PASSWORD",
-                sshKey = encryptedPrefs.getString("ssh_key", null)
-                    ?: prefs[SSH_KEY_LEGACY] ?: "",
-                hostFingerprint = prefs[SSH_HOST_FP] ?: ""
-            )
-        }
 
     val clientConfigFlow: Flow<ClientConfig> = context.dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -140,30 +104,6 @@ class AppPreferences(context: Context) {
     val dynamicThemeFlow: Flow<Boolean> = context.dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { prefs -> prefs[DYNAMIC_THEME] ?: true }
-
-    suspend fun saveSshConfig(config: SshConfig) {
-        // Чувствительные данные — в зашифрованное хранилище
-        withContext(Dispatchers.IO) {
-            encryptedPrefs.edit {
-                putString("ssh_pass", config.password)
-                    .putString("ssh_key", config.sshKey)
-            }
-        }
-        // Остальное — в DataStore; удаляем устаревшие незашифрованные значения
-        context.dataStore.edit { prefs ->
-            prefs[SSH_IP] = config.ip
-            prefs[SSH_PORT] = config.port
-            prefs[SSH_USER] = config.username
-            prefs[SSH_AUTH_TYPE] = config.authType
-            prefs[SSH_HOST_FP] = config.hostFingerprint
-            prefs.remove(SSH_PASS_LEGACY)
-            prefs.remove(SSH_KEY_LEGACY)
-        }
-    }
-
-    suspend fun saveSshFingerprint(fingerprint: String) {
-        context.dataStore.edit { prefs -> prefs[SSH_HOST_FP] = fingerprint }
-    }
 
     suspend fun saveClientConfig(config: ClientConfig) {
         context.dataStore.edit { prefs ->

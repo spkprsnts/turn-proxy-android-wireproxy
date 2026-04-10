@@ -69,8 +69,6 @@ fun ClientSetupScreen(
     onFinish: (() -> Unit)? = null
 ) {
     val saved by viewModel.clientConfig.collectAsStateWithLifecycle()
-    val sshConfig by viewModel.sshConfig.collectAsStateWithLifecycle()
-    val proxyListen by viewModel.proxyListen.collectAsStateWithLifecycle()
     val customKernelExists by viewModel.customKernelExists.collectAsStateWithLifecycle()
     val kernelError by viewModel.kernelError.collectAsStateWithLifecycle()
     val privacyMode by viewModel.privacyMode.collectAsStateWithLifecycle()
@@ -88,20 +86,13 @@ fun ClientSetupScreen(
     var noDtls       by rememberSaveable(saved.noDtls)         { mutableStateOf(saved.noDtls) }
     var manualCaptcha by rememberSaveable(saved.manualCaptcha) { mutableStateOf(saved.manualCaptcha) }
     var localPort    by rememberSaveable(saved.localPort)      { mutableStateOf(saved.localPort) }
+    var vlessMode    by rememberSaveable(saved.vlessMode)      { mutableStateOf(saved.vlessMode) }
     var forcePort443 by rememberSaveable(saved.forceTurnPort443) { mutableStateOf(saved.forceTurnPort443) }
     var lastSliderInt by rememberSaveable { mutableIntStateOf(saved.threads) }
 
-    // Автозаполнение адреса сервера из SSH-конфига если поле пустое
-    LaunchedEffect(sshConfig.ip, proxyListen) {
-        if (serverAddress.isBlank() && sshConfig.ip.isNotBlank()) {
-            val port = proxyListen.substringAfterLast(":", "56000")
-            serverAddress = "${sshConfig.ip}:$port"
-        }
-    }
-
     // Авто-сохранение с дебаунсом 600 мс на каждое изменение поля.
     // vlessMode исключён — сохраняется через setVlessMode с автоперезапуском сервера.
-    LaunchedEffect(serverAddress, vkLink, threads, useUdp, noDtls, manualCaptcha, localPort, forcePort443) {
+    LaunchedEffect(serverAddress, vkLink, threads, useUdp, noDtls, manualCaptcha, localPort, vlessMode, forcePort443) {
         delay(600)
         viewModel.saveClientConfig(
             ClientConfig(
@@ -112,7 +103,7 @@ fun ClientSetupScreen(
                 noDtls           = noDtls,
                 manualCaptcha    = manualCaptcha,
                 localPort        = localPort.trim(),
-                vlessMode        = saved.vlessMode,
+                vlessMode        = vlessMode,
                 forceTurnPort443 = forcePort443
             )
         )
@@ -209,14 +200,17 @@ fun ClientSetupScreen(
             SwitchRow(
                 label = stringResource(R.string.vless_mode),
                 description = stringResource(R.string.vless_mode_desc),
-                checked = saved.vlessMode,
+                checked = vlessMode,
                 onCheckedChange = {
-                    HapticUtil.perform(context, if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF)
-                    viewModel.setVlessMode(it)
+                    HapticUtil.perform(
+                        context,
+                        if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF
+                    )
+                    vlessMode = it
                 }
             )
 
-            if (!saved.vlessMode) {
+            if (!vlessMode) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column {
                         Text(stringResource(R.string.transport_protocol), style = MaterialTheme.typography.bodyMedium)

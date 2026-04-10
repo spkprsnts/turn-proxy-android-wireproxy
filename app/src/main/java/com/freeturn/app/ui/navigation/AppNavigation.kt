@@ -34,17 +34,11 @@ import com.freeturn.app.ui.screens.ClientSetupScreen
 import com.freeturn.app.ui.screens.HomeScreen
 import com.freeturn.app.ui.screens.LogsScreen
 import com.freeturn.app.ui.screens.OnboardingScreen
-import com.freeturn.app.ui.screens.ServerManagementScreen
-import com.freeturn.app.ui.screens.SshSetupScreen
 import com.freeturn.app.viewmodel.ProxyState
 import com.freeturn.app.viewmodel.MainViewModel
 
 object Routes {
     const val ONBOARDING = "onboarding"
-    const val SSH_SETUP = "ssh_setup"              // из настроек/инфо-модалки
-    const val SSH_SETUP_OB = "ssh_setup_ob"        // только в мастере онбординга
-    const val SERVER_MANAGEMENT = "server_management"
-    const val SERVER_MANAGEMENT_OB = "server_management_ob" // только в мастере онбординга
     const val CLIENT_SETUP = "client_setup"
     const val CLIENT_SETUP_OB = "client_setup_onboarding"
     const val HOME = "home"
@@ -52,7 +46,7 @@ object Routes {
 }
 
 // Нижнее меню видно только в основном потоке, не во время онбординга
-private val BOTTOM_NAV_ROUTES = setOf(Routes.HOME, Routes.LOGS, Routes.SERVER_MANAGEMENT, Routes.CLIENT_SETUP)
+private val BOTTOM_NAV_ROUTES = setOf(Routes.HOME, Routes.LOGS, Routes.CLIENT_SETUP)
 
 @Composable
 fun AppNavigation(viewModel: MainViewModel) {
@@ -107,35 +101,10 @@ fun AppNavigation(viewModel: MainViewModel) {
 
                 composable(Routes.ONBOARDING) {
                     OnboardingScreen(
-                        onSetupServer = { navController.navigate(Routes.SSH_SETUP_OB) },
                         onSkip = {
                             viewModel.setOnboardingDone()
                             navController.navigate(Routes.HOME) {
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    )
-                }
-
-                composable(Routes.SSH_SETUP_OB) {
-                    SshSetupScreen(
-                        viewModel = viewModel,
-                        onConnected = {
-                            navController.navigate(Routes.SERVER_MANAGEMENT_OB) {
-                                popUpTo(Routes.SSH_SETUP_OB) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(Routes.SERVER_MANAGEMENT_OB) {
-                    ServerManagementScreen(
-                        viewModel = viewModel,
-                        onContinue = {
-                            navController.navigate(Routes.CLIENT_SETUP_OB) {
                                 launchSingleTop = true
                             }
                         }
@@ -158,33 +127,6 @@ fun AppNavigation(viewModel: MainViewModel) {
 
                 // Основной поток (с нижним меню)
 
-                composable(Routes.SSH_SETUP) {
-                    SshSetupScreen(
-                        viewModel = viewModel,
-                        onConnected = {
-                            navController.navigate(Routes.SERVER_MANAGEMENT) {
-                                popUpTo(Routes.SSH_SETUP) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(Routes.SERVER_MANAGEMENT) {
-                    ServerManagementScreen(
-                        viewModel = viewModel,
-                        onContinue = {
-                            navController.navigate(Routes.CLIENT_SETUP) {
-                                // Убираем SERVER_MANAGEMENT из back stack,
-                                // иначе он остаётся под CLIENT_SETUP и bottom nav ломается
-                                popUpTo(Routes.HOME) { inclusive = false; saveState = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    )
-                }
-
                 composable(Routes.CLIENT_SETUP) {
                     ClientSetupScreen(
                         viewModel = viewModel,
@@ -194,8 +136,7 @@ fun AppNavigation(viewModel: MainViewModel) {
 
                 composable(Routes.HOME) {
                     HomeScreen(
-                        viewModel = viewModel,
-                        onNavigateToSshSetup = { navController.navigate(Routes.SSH_SETUP) }
+                        viewModel = viewModel
                     )
                 }
 
@@ -229,7 +170,6 @@ private data class NavItem(
 
 private val navItems = listOf(
     NavItem(Routes.HOME, R.string.nav_home, R.drawable.home_24px, R.drawable.home_outlined_24px),
-    NavItem(Routes.SERVER_MANAGEMENT, R.string.server, R.drawable.database_24px, R.drawable.database_outlined_24px),
     NavItem(Routes.CLIENT_SETUP, R.string.client_title, R.drawable.mobile_24px, R.drawable.mobile_outlined_24px),
     NavItem(Routes.LOGS, R.string.logs_title, R.drawable.terminal_24px, R.drawable.terminal_24px)
 )

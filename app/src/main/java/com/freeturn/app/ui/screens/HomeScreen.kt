@@ -88,22 +88,18 @@ import com.freeturn.app.ui.theme.StatusGreen
 import com.freeturn.app.ui.theme.StatusGreenDark
 import com.freeturn.app.viewmodel.MainViewModel
 import com.freeturn.app.viewmodel.ProxyState
-import com.freeturn.app.viewmodel.SshConnectionState
 import com.freeturn.app.viewmodel.UpdateState
 import androidx.core.net.toUri
 
 @SuppressLint("BatteryLife")
 @Composable
 fun HomeScreen(
-    viewModel: MainViewModel,
-    onNavigateToSshSetup: () -> Unit
+    viewModel: MainViewModel
 ) {
     val context = LocalContext.current
     val proxyState by viewModel.proxyState.collectAsStateWithLifecycle()
-    val sshState by viewModel.sshState.collectAsStateWithLifecycle()
-    val sshConfig by viewModel.sshConfig.collectAsStateWithLifecycle()
     val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
-    val isConfigured = sshConfig.ip.isNotBlank()
+    val isConfigured = clientConfig.serverAddress.isNotBlank()
 
     // Запрос разрешений при первом открытии главного экрана
     val batteryOptLauncher = rememberLauncherForActivityResult(
@@ -236,49 +232,6 @@ fun HomeScreen(
                         ConfigRow(stringResource(R.string.local_port), clientConfig.localPort.redact(privacyMode))
                     }
                 }
-
-                Spacer(Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(
-                                if (sshState is SshConnectionState.Connected) StatusBlue
-                                else MaterialTheme.colorScheme.outline,
-                                CircleShape
-                            )
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        when (sshState) {
-                            is SshConnectionState.Connected -> "SSH: ${(sshState as SshConnectionState.Connected).ip.redact(privacyMode)}"
-                            is SshConnectionState.Connecting -> stringResource(R.string.ssh_connecting)
-                            is SshConnectionState.Error -> stringResource(R.string.ssh_error)
-                            else -> stringResource(R.string.ssh_disconnected)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
-                    if (sshState !is SshConnectionState.Connected) {
-                        Spacer(Modifier.width(8.dp))
-                        TextButton(
-                            onClick = {
-                                HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                                viewModel.reconnectSsh()
-                            },
-                            enabled = sshState !is SshConnectionState.Connecting,
-                            modifier = Modifier.height(28.dp)
-                        ) {
-                            Text(stringResource(R.string.reconnect), style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
             }
 
             Spacer(Modifier.height(32.dp))
@@ -296,11 +249,7 @@ fun HomeScreen(
                 viewModel = viewModel,
                 containerColor = sheetColor,
                 privacyMode = privacyMode,
-                onPrivacyModeChange = { viewModel.setPrivacyMode(it) },
-                onNavigateToSshSetup = {
-                    showBottomSheet.value = false
-                    onNavigateToSshSetup()
-                }
+                onPrivacyModeChange = { viewModel.setPrivacyMode(it) }
             )
         }
     }
@@ -468,12 +417,10 @@ private fun InfoBottomSheet(
     viewModel: MainViewModel,
     containerColor: Color,
     privacyMode: Boolean,
-    onPrivacyModeChange: (Boolean) -> Unit,
-    onNavigateToSshSetup: () -> Unit
+    onPrivacyModeChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
-    val sshState by viewModel.sshState.collectAsStateWithLifecycle()
     val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
@@ -483,7 +430,6 @@ private fun InfoBottomSheet(
         catch (_: Exception) { "—" }
     }
 
-    val isConnected = sshState is SshConnectionState.Connected
     val listColors = ListItemDefaults.colors(containerColor = containerColor)
 
     LazyColumn(
@@ -491,42 +437,6 @@ private fun InfoBottomSheet(
             .fillMaxWidth()
             .navigationBarsPadding()
     ) {
-        // Соединение
-        item {
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.connection), style = MaterialTheme.typography.titleSmall) },
-                colors = listColors,
-                supportingContent = {
-                    Text(
-                        when (sshState) {
-                            is SshConnectionState.Connected ->
-                                stringResource(R.string.connected_format, (sshState as SshConnectionState.Connected).ip.redact(privacyMode))
-                            is SshConnectionState.Connecting ->
-                                stringResource(R.string.ssh_connecting)
-                            is SshConnectionState.Error ->
-                                stringResource(R.string.error_format_short, (sshState as SshConnectionState.Error).message)
-                            else -> stringResource(R.string.not_connected)
-                        }
-                    )
-                },
-                trailingContent = {
-                    if (isConnected) {
-                        TextButton(onClick = {
-                            HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                            onNavigateToSshSetup()
-                        }) { Text(stringResource(R.string.change)) }
-                    } else {
-                        TextButton(onClick = {
-                            HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                            onNavigateToSshSetup()
-                        }) { Text(stringResource(R.string.configure)) }
-                    }
-                }
-            )
-        }
-
-        item { HorizontalDivider() }
-
         // Ссылки
         item {
             RepoLinkItem(

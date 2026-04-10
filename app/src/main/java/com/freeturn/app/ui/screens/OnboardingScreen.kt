@@ -43,7 +43,6 @@ import com.freeturn.app.ui.HapticUtil
 
 @Composable
 fun OnboardingScreen(
-    onSetupServer: () -> Unit,
     onSkip: () -> Unit
 ) {
     val context = LocalContext.current
@@ -116,31 +115,9 @@ fun OnboardingScreen(
 
                 Spacer(Modifier.height(28.dp))
 
-                // Privacy notice
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.nearby_24px),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            stringResource(R.string.privacy_notice),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                Text(stringResource(R.string.mod_by_speakpresents), style = MaterialTheme.typography.labelSmall)
+
+                Spacer(Modifier.height(28.dp))
             }
 
             // Action buttons
@@ -151,7 +128,7 @@ fun OnboardingScreen(
                 Button(
                     onClick = {
                         HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                        onSetupServer()
+                        onSkip()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -161,16 +138,7 @@ fun OnboardingScreen(
                 ) {
                     Icon(painterResource(R.drawable.wifi_24px), contentDescription = null)
                     Spacer(Modifier.width(10.dp))
-                    Text(stringResource(R.string.setup_server), style = MaterialTheme.typography.labelLarge)
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                TextButton(onClick = {
-                    HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
-                    onSkip()
-                }) {
-                    Text(stringResource(R.string.skip_setup))
+                    Text(stringResource(R.string.start), style = MaterialTheme.typography.labelLarge)
                 }
 
                 Spacer(Modifier.height(24.dp))

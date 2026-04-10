@@ -10,11 +10,8 @@ import com.freeturn.app.ProxyService
 import com.freeturn.app.ProxyServiceState
 import com.freeturn.app.data.AppPreferences
 import com.freeturn.app.data.ClientConfig
-import com.freeturn.app.data.SshConfig
 import com.freeturn.app.domain.AppUpdater
 import com.freeturn.app.domain.LocalProxyManager
-import com.freeturn.app.domain.SshRepository
-import com.freeturn.app.ui.HapticUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,13 +23,8 @@ import kotlinx.coroutines.launch
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = AppPreferences(application)
-    private val sshRepository = SshRepository()
     private val proxyManager = LocalProxyManager(application)
     private val appUpdater = AppUpdater(application)
-
-    val sshState: StateFlow<SshConnectionState> = sshRepository.sshState
-    val serverState: StateFlow<ServerState> = sshRepository.serverState
-    val sshLog: StateFlow<List<String>> = sshRepository.sshLog
 
     val proxyState: StateFlow<ProxyState> = proxyManager.proxyState
     val logs: StateFlow<List<String>> = ProxyServiceState.logs
@@ -69,20 +61,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         proxyManager.destroy()
     }
 
-    val sshConfig: StateFlow<SshConfig> = prefs.sshConfigFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SshConfig())
-
     val clientConfig: StateFlow<ClientConfig> = prefs.clientConfigFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ClientConfig())
 
     val onboardingDone: StateFlow<Boolean> = prefs.onboardingDoneFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
-    val proxyListen: StateFlow<String> = prefs.proxyListenFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "0.0.0.0:56000")
-
-    val proxyConnect: StateFlow<String> = prefs.proxyConnectFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "127.0.0.1:40537")
 
     val dynamicTheme: StateFlow<Boolean> = prefs.dynamicThemeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
@@ -95,65 +78,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val privacyMode: StateFlow<Boolean> = _privacyMode.asStateFlow()
 
     fun setPrivacyMode(enabled: Boolean) { _privacyMode.value = enabled }
-
-    // SSH
-    fun connectSsh(config: SshConfig) {
-        viewModelScope.launch {
-            prefs.saveSshConfig(config)
-            val (success, fp) = sshRepository.connectSsh(config)
-            if (success) {
-                if (config.hostFingerprint.isEmpty() && fp != null) {
-                    prefs.saveSshFingerprint(fp)
-                }
-                HapticUtil.perform(getApplication(), HapticUtil.Pattern.SUCCESS)
-            } else {
-                HapticUtil.perform(getApplication(), HapticUtil.Pattern.ERROR)
-            }
-        }
-    }
-
-    fun reconnectSsh() {
-        viewModelScope.launch {
-            val cfg = sshRepository.activeSshConfig
-                 ?: sshConfig.value.takeIf { it.ip.isNotEmpty() }
-                 ?: prefs.sshConfigFlow.first()
-            if (cfg.ip.isNotEmpty()) connectSsh(cfg)
-        }
-    }
-
-    // Server management
-    fun installServer() {
-        viewModelScope.launch { sshRepository.installServer() }
-    }
-
-    fun startServer() {
-        val l = proxyListen.value
-        val c = proxyConnect.value
-        if (!l.matches(Regex("""^[\w.\-]+:\d{1,5}$""")) || !c.matches(Regex("""^[\w.\-]+:\d{1,5}$"""))) {
-            sshRepository.updateServerState(ServerState.Error("Неверный формат адреса (ожидается host:port)"))
-            return
-        }
-        val vless = clientConfig.value.vlessMode
-        viewModelScope.launch { sshRepository.startServer(l, c, vless) }
-    }
-
-    fun stopServer() {
-        viewModelScope.launch { sshRepository.stopServer() }
-    }
-
-    /** Переключает VLESS-режим. Если SSH подключён и сервер запущен — автоперезапуск. */
-    fun setVlessMode(enabled: Boolean) {
-        val current = clientConfig.value
-        if (current.vlessMode == enabled) return
-        viewModelScope.launch {
-            prefs.saveClientConfig(current.copy(vlessMode = enabled))
-            val serverRunning = (serverState.value as? ServerState.Known)?.running == true
-            if (serverRunning) {
-                sshRepository.stopServer()
-                startServer()
-            }
-        }
-    }
 
     // Local proxy
     fun startProxy() {
@@ -177,10 +101,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Preferences
     fun saveClientConfig(config: ClientConfig) {
         viewModelScope.launch { prefs.saveClientConfig(config) }
-    }
-
-    fun saveProxyServerConfig(listen: String, connect: String) {
-        viewModelScope.launch { prefs.saveProxyConfig(listen, connect) }
     }
 
     fun setOnboardingDone() {
@@ -228,7 +148,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 context.stopService(Intent(context, ProxyService::class.java))
             }
             prefs.resetAll()
-            sshRepository.resetAll()
             proxyManager.clearState()
             ProxyServiceState.clearLogs()
 

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.freeturn.app.wireproxy"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 36
         versionCode = 13
         versionName = "1.7.0"
