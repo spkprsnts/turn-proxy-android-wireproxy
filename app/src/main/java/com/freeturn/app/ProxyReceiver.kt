@@ -9,7 +9,7 @@ class ProxyReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            "com.freeturn.app.START_PROXY" -> {
+            "com.freeturn.app.wireproxy.START_PROXY" -> {
                 ProxyServiceState.clearLogs()
                 ProxyServiceState.setStartupResult(null)
                 val serviceIntent = Intent(context, ProxyService::class.java)
@@ -19,7 +19,7 @@ class ProxyReceiver : BroadcastReceiver() {
                     context.startService(serviceIntent)
                 }
             }
-            "com.freeturn.app.STOP_PROXY" -> {
+            "com.freeturn.app.wireproxy.STOP_PROXY" -> {
                 val serviceIntent = Intent(context, ProxyService::class.java)
                 context.stopService(serviceIntent)
             }

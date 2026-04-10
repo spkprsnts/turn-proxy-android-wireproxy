@@ -8,7 +8,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.freeturn.app"
+        applicationId = "com.freeturn.app.wireproxy"
         minSdk = 23
         targetSdk = 36
         versionCode = 13
