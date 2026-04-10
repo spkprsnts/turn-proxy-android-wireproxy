@@ -50,8 +50,6 @@ class AppPreferences(context: Context) {
         val CLIENT_RAW_CMD = stringPreferencesKey("client_raw_cmd")
         val CLIENT_VLESS = booleanPreferencesKey("client_vless")
         val CLIENT_FORCE_PORT_443 = booleanPreferencesKey("client_force_port_443")
-        val PROXY_LISTEN = stringPreferencesKey("proxy_listen")
-        val PROXY_CONNECT = stringPreferencesKey("proxy_connect")
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
     }
 
@@ -93,14 +91,6 @@ class AppPreferences(context: Context) {
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { prefs -> prefs[ONBOARDING_DONE] ?: false }
 
-    val proxyListenFlow: Flow<String> = context.dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { prefs -> prefs[PROXY_LISTEN] ?: "0.0.0.0:56000" }
-
-    val proxyConnectFlow: Flow<String> = context.dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { prefs -> prefs[PROXY_CONNECT] ?: "127.0.0.1:40537" }
-
     val dynamicThemeFlow: Flow<Boolean> = context.dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { prefs -> prefs[DYNAMIC_THEME] ?: true }
@@ -127,13 +117,6 @@ class AppPreferences(context: Context) {
 
     suspend fun setDynamicTheme(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[DYNAMIC_THEME] = enabled }
-    }
-
-    suspend fun saveProxyConfig(listen: String, connect: String) {
-        context.dataStore.edit { prefs ->
-            prefs[PROXY_LISTEN] = listen
-            prefs[PROXY_CONNECT] = connect
-        }
     }
 
     /** Полный сброс: DataStore + EncryptedSharedPreferences + кастомный бинарник */
