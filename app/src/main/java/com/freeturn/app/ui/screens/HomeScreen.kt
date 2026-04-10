@@ -47,6 +47,9 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -54,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.freeturn.app.data.ThemeMode
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -421,8 +425,8 @@ private fun InfoBottomSheet(
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
-    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
 
     val appVersion = remember {
@@ -465,15 +469,38 @@ private fun InfoBottomSheet(
         // Настройки интерфейса
         item {
             ListItem(
-                headlineContent = { Text(stringResource(R.string.privacy_mode_title)) },
-                supportingContent = { Text(stringResource(R.string.privacy_mode_desc)) },
-                colors = listColors,
-                trailingContent = {
-                    androidx.compose.material3.Switch(
-                        checked = privacyMode,
-                        onCheckedChange = onPrivacyModeChange
-                    )
-                }
+                headlineContent = { Text(stringResource(R.string.theme_title)) },
+                supportingContent = {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        ThemeMode.entries.forEachIndexed { index, mode ->
+                            SegmentedButton(
+                                selected = themeMode == mode,
+                                onClick = {
+                                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                                    viewModel.setThemeMode(mode)
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = ThemeMode.entries.size
+                                ),
+                                label = {
+                                    Text(
+                                        when (mode) {
+                                            ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                                            ThemeMode.DARK -> stringResource(R.string.theme_dark)
+                                            ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                },
+                colors = listColors
             )
         }
 
@@ -486,6 +513,22 @@ private fun InfoBottomSheet(
                     androidx.compose.material3.Switch(
                         checked = dynamicTheme,
                         onCheckedChange = { viewModel.setDynamicTheme(it) }
+                    )
+                }
+            )
+        }
+
+        item { HorizontalDivider() }
+
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.privacy_mode_title)) },
+                supportingContent = { Text(stringResource(R.string.privacy_mode_desc)) },
+                colors = listColors,
+                trailingContent = {
+                    androidx.compose.material3.Switch(
+                        checked = privacyMode,
+                        onCheckedChange = onPrivacyModeChange
                     )
                 }
             )

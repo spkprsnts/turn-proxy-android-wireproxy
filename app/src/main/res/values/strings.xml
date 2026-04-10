@@ -139,8 +139,12 @@
     <string name="update_no_update">Установлена последняя версия</string>
     <string name="update_error">Ошибка: %1$s</string>
 
-    <string name="dynamic_theme_title">Динамическая тема</string>
-    <string name="dynamic_theme_desc">Использовать системные цвета (Material You)</string>
+    <string name="dynamic_theme_title">Системные цвета</string>
+    <string name="dynamic_theme_desc">Использовать Material You</string>
+    <string name="theme_title">Тема оформления</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_system">Системная</string>
     <string name="privacy_mode_title">Приватный режим</string>
     <string name="privacy_mode_desc">Скрывает IP и порты</string>
 </resources>

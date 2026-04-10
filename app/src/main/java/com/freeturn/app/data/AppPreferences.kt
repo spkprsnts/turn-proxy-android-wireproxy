@@ -32,6 +32,10 @@ data class ClientConfig(
     val forceTurnPort443: Boolean = false
 )
 
+enum class ThemeMode {
+    DARK, LIGHT, SYSTEM
+}
+
 // P2-3 / P3-6: всегда используем applicationContext, чтобы lazy-init encryptedPrefs
 // не мог сработать на уничтоженном контексте (например Service после onDestroy)
 class AppPreferences(context: Context) {
@@ -51,6 +55,7 @@ class AppPreferences(context: Context) {
         val CLIENT_VLESS = booleanPreferencesKey("client_vless")
         val CLIENT_FORCE_PORT_443 = booleanPreferencesKey("client_force_port_443")
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
     // Шифрованное хранилище для SSH-пароля и ключа (Android Keystore + AES-256)
@@ -95,6 +100,12 @@ class AppPreferences(context: Context) {
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { prefs -> prefs[DYNAMIC_THEME] ?: true }
 
+    val themeModeFlow: Flow<ThemeMode> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
+            ThemeMode.valueOf(prefs[THEME_MODE] ?: ThemeMode.DARK.name)
+        }
+
     suspend fun saveClientConfig(config: ClientConfig) {
         context.dataStore.edit { prefs ->
             prefs[CLIENT_SERVER_ADDR] = config.serverAddress
@@ -117,6 +128,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setDynamicTheme(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[DYNAMIC_THEME] = enabled }
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { prefs -> prefs[THEME_MODE] = mode.name }
     }
 
     /** Полный сброс: DataStore + EncryptedSharedPreferences + кастомный бинарник */

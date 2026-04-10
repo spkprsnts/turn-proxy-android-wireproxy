@@ -10,6 +10,7 @@ import com.freeturn.app.ProxyService
 import com.freeturn.app.ProxyServiceState
 import com.freeturn.app.data.AppPreferences
 import com.freeturn.app.data.ClientConfig
+import com.freeturn.app.data.ThemeMode
 import com.freeturn.app.domain.AppUpdater
 import com.freeturn.app.domain.LocalProxyManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,6 +74,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setDynamicTheme(enabled: Boolean) {
         viewModelScope.launch { prefs.setDynamicTheme(enabled) }
     }
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { prefs.setThemeMode(mode) }
+    }
+    val themeMode: StateFlow<ThemeMode> = prefs.themeModeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.DARK)
 
     private val _privacyMode = MutableStateFlow(false)
     val privacyMode: StateFlow<Boolean> = _privacyMode.asStateFlow()

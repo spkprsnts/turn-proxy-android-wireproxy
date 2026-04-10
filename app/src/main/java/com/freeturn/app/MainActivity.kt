@@ -32,8 +32,9 @@ class MainActivity : ComponentActivity() {
         HapticUtil.perform(this, HapticUtil.Pattern.LAUNCH)
         enableEdgeToEdge()
         setContent {
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
-            FreeTurnTheme(dynamicColor = dynamicTheme) {
+            FreeTurnTheme(themeMode = themeMode, dynamicColor = dynamicTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
