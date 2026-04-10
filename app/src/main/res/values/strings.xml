@@ -49,6 +49,8 @@
     <string name="parameters_title">Параметры</string>
     <string name="threads_format">Потоки: %1$d</string>
     <string name="threads_recommendation">Рекомендуется 4–8</string>
+    <string name="vless_mode">VLESS-режим</string>
+    <string name="vless_mode_desc">Проброс VLESS через TURN-туннель (требует -vless на сервере)</string>
     <string name="transport_protocol">Транспорт</string>
     <string name="transport_protocol_desc">UDP снижает задержки, TCP — стабильнее</string>
     <string name="no_dtls">Без DTLS-шифрования</string>
