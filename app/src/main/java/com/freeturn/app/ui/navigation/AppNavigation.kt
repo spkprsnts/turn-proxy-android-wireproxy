@@ -34,11 +34,13 @@ import com.freeturn.app.ui.screens.ClientSetupScreen
 import com.freeturn.app.ui.screens.HomeScreen
 import com.freeturn.app.ui.screens.LogsScreen
 import com.freeturn.app.ui.screens.OnboardingScreen
+import com.freeturn.app.ui.screens.WireproxyConfigScreen
 import com.freeturn.app.viewmodel.ProxyState
 import com.freeturn.app.viewmodel.MainViewModel
 
 object Routes {
     const val ONBOARDING = "onboarding"
+    const val WIREGUARD_CONFIG = "wireguard_config"
     const val CLIENT_SETUP = "client_setup"
     const val CLIENT_SETUP_OB = "client_setup_onboarding"
     const val HOME = "home"
@@ -46,7 +48,7 @@ object Routes {
 }
 
 // Нижнее меню видно только в основном потоке, не во время онбординга
-private val BOTTOM_NAV_ROUTES = setOf(Routes.HOME, Routes.LOGS, Routes.CLIENT_SETUP)
+private val BOTTOM_NAV_ROUTES = setOf(Routes.HOME, Routes.LOGS, Routes.CLIENT_SETUP, Routes.WIREGUARD_CONFIG)
 
 @Composable
 fun AppNavigation(viewModel: MainViewModel) {
@@ -127,6 +129,13 @@ fun AppNavigation(viewModel: MainViewModel) {
 
                 // Основной поток (с нижним меню)
 
+                composable(Routes.WIREGUARD_CONFIG) {
+                    WireproxyConfigScreen(
+                        viewModel = viewModel,
+                        showFinishButton = false
+                    )
+                }
+
                 composable(Routes.CLIENT_SETUP) {
                     ClientSetupScreen(
                         viewModel = viewModel,
@@ -170,6 +179,7 @@ private data class NavItem(
 
 private val navItems = listOf(
     NavItem(Routes.HOME, R.string.nav_home, R.drawable.home_24px, R.drawable.home_outlined_24px),
+    NavItem(Routes.WIREGUARD_CONFIG, R.string.wireproxy_title, R.drawable.wifi_24px, R.drawable.wifi_24px),
     NavItem(Routes.CLIENT_SETUP, R.string.client_title, R.drawable.mobile_24px, R.drawable.mobile_outlined_24px),
     NavItem(Routes.LOGS, R.string.logs_title, R.drawable.terminal_24px, R.drawable.terminal_24px)
 )

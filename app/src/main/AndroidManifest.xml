@@ -53,6 +53,16 @@
                 android:value="Поддержание активного сетевого прокси-соединения через TURN-серверы для обхода ограничений сети." />
         </service>
 
+        <service
+            android:name=".WireproxyService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Поддержание WireGuard-туннеля через wireproxy для маршрутизации трафика." />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

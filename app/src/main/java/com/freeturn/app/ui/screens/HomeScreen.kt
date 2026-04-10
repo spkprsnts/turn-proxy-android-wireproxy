@@ -393,7 +393,6 @@ private fun UpdateDialogs(viewModel: MainViewModel) {
 }
 
 // Кнопка прокси
-
 @Composable
 private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
     val containerColor by animateColorAsState(
