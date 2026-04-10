@@ -84,7 +84,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import com.freeturn.app.ui.HapticUtil
-import com.freeturn.app.ui.theme.StatusBlue
 import com.freeturn.app.ui.theme.StatusGreen
 import com.freeturn.app.ui.theme.StatusGreenDark
 import com.freeturn.app.viewmodel.MainViewModel
