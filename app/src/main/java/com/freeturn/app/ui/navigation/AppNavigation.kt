@@ -184,8 +184,8 @@ private data class NavItem(
 
 private val navItems = listOf(
     NavItem(Routes.HOME, R.string.nav_home, R.drawable.home_24px, R.drawable.home_outlined_24px),
-    NavItem(Routes.WIREGUARD_CONFIG, R.string.wireproxy_title, R.drawable.wifi_24px, R.drawable.wifi_24px),
     NavItem(Routes.CLIENT_SETUP, R.string.client_title, R.drawable.mobile_24px, R.drawable.mobile_outlined_24px),
+    NavItem(Routes.WIREGUARD_CONFIG, R.string.wireproxy_title, R.drawable.wifi_24px, R.drawable.wifi_24px),
     NavItem(Routes.LOGS, R.string.logs_title, R.drawable.terminal_24px, R.drawable.terminal_24px)
 )
 

@@ -42,25 +42,20 @@
             android:name=".ProxyService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
-            tools:targetApi="29">
-            <!--
-                Обязательное свойство для foregroundServiceType="specialUse".
-                Без него Google Play отклоняет приложение.
-                Описывает назначение: поддержание сетевого прокси-соединения.
-            -->
+            tools:targetApi="34">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Поддержание активного сетевого прокси-соединения через TURN-серверы для обхода ограничений сети." />
+                android:value="Maintaining a persistent network proxy connection via TURN servers to bypass network restrictions." />
         </service>
 
         <service
             android:name=".WireproxyService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
-
+            android:foregroundServiceType="specialUse"
+            tools:targetApi="34">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Поддержание WireGuard-туннеля через wireproxy для маршрутизации трафика." />
+                android:value="Maintaining a WireGuard tunnel via wireproxy for traffic routing." />
         </service>
 
         <provider
