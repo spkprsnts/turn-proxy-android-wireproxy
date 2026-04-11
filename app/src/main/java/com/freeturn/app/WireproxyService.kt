@@ -70,7 +70,7 @@ class WireproxyService : Service() {
         cmdArgs.add(configFile.absolutePath)
 
         try {
-            ProxyServiceState.addLog("Wireproxy starting: ${cmdArgs.joinToString(" ")}")
+            ProxyServiceState.addLog("[Wireproxy] starting: ${cmdArgs.joinToString(" ")}")
             val proc = withContext(Dispatchers.IO) {
                 ProcessBuilder(cmdArgs)
                     .redirectErrorStream(true)
@@ -81,7 +81,7 @@ class WireproxyService : Service() {
             BufferedReader(InputStreamReader(proc.inputStream)).use { reader ->
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
-                    ProxyServiceState.addLog("Wireproxy: $line")
+                    ProxyServiceState.addLog("[Wireproxy] $line")
                 }
             }
             withContext(Dispatchers.IO) {
@@ -90,9 +90,9 @@ class WireproxyService : Service() {
         } catch (e: InterruptedIOException) {
             // pass
         } catch (e: Exception) {
-            ProxyServiceState.addLog("Wireproxy Error: ${e.message}")
+            ProxyServiceState.addLog("[Wireproxy] Error: ${e.message}")
         } finally {
-            ProxyServiceState.addLog("Wireproxy stopped")
+            ProxyServiceState.addLog("[Wireproxy] stopped")
             stopSelf()
         }
     }

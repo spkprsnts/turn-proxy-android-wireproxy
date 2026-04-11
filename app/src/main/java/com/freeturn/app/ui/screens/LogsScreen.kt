@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -115,20 +116,23 @@ fun LogsScreen(viewModel: MainViewModel) {
 private fun LogLine(line: String) {
     val lower = line.lowercase()
     val isHeader = line.startsWith("===")
+    val isWireproxy = line.startsWith("[Wireproxy]")
     val isError = lower.contains("ошибка") || lower.contains("error") ||
                   lower.contains("критическая") || lower.contains("failed") ||
-                  lower.contains("fatal") || lower.contains("panic")
+                  lower.contains("fatal") || lower.contains("panic") ||
+                  lower.contains("did not complete")
     val isWarning = lower.contains("watchdog") || lower.contains("перезапуск") ||
                     lower.contains("quota") || lower.contains("warn") ||
-                    lower.contains(">>>")
+                    lower.contains(">>>") || lower.contains("stopped")
     val isSuccess = lower.contains("запущен") || lower.contains("подключен") ||
                     lower.contains("success") || lower.contains("started") ||
-                    lower.contains("ok")
+                    lower.contains("ok") || lower.contains("established") ||
+                    lower.contains("received handshake")
 
     val textColor = when {
         isError   -> MaterialTheme.colorScheme.error
         isWarning -> MaterialTheme.colorScheme.tertiary
-        isSuccess -> MaterialTheme.colorScheme.primary
+        isSuccess -> Color(0xFF4CAF50)
         isHeader  -> MaterialTheme.colorScheme.primary
         else      -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -152,7 +156,10 @@ private fun LogLine(line: String) {
             text = line,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontFamily = FontFamily.Monospace,
-                fontWeight = if (isHeader) FontWeight.SemiBold else FontWeight.Normal
+                fontWeight = when {
+                    isHeader || isWireproxy -> FontWeight.SemiBold
+                    else -> FontWeight.Normal
+                }
             ),
             color = textColor
         )
