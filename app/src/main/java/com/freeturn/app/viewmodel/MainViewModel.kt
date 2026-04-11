@@ -189,9 +189,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateWgConfigText(text: String) {
-        _wgConfigText.value = text
         _wgConfig.value = parseWgConfig(text)
-        saveWgConfigInternal(text)
+        val newText = _wgConfig.value.toWgString()
+        _wgConfigText.value = newText
+        saveWgConfigInternal(newText)
     }
 
     private fun saveWgConfigInternal(text: String) {
@@ -202,9 +203,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun parseWgConfig(text: String): WgConfig {
-        var privateKey = ""; var address = ""; var dns = ""; var mtu = ""
-        var publicKey = ""; var endpoint = ""; var allowedIps = ""; var persistentKeepalive = ""
-        var httpBindAddress = ""; var socks5BindAddress = ""
+        var privateKey = ""; var address = ""; var dns = ""; var mtu = "1280"
+        var publicKey = ""; var endpoint = "127.0.0.1:9000"; var allowedIps = ""; var persistentKeepalive = "25"
+        var httpBindAddress = "127.0.0.1:8080"; var socks5BindAddress = "127.0.0.1:2080"
 
         var currentSection = ""
         text.lineSequence().forEach { line ->

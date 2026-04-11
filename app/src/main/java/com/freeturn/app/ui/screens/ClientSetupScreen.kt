@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,6 +55,7 @@ import com.freeturn.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.data.ClientConfig
 import com.freeturn.app.ui.HapticUtil
+import com.freeturn.app.ui.ValidatorUtils
 import com.freeturn.app.viewmodel.MainViewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -92,6 +94,13 @@ fun ClientSetupScreen(
     var vlessMode    by rememberSaveable(saved.vlessMode)      { mutableStateOf(saved.vlessMode) }
     var forcePort443 by rememberSaveable(saved.forceTurnPort443) { mutableStateOf(saved.forceTurnPort443) }
     var lastSliderInt by rememberSaveable { mutableIntStateOf(saved.threads) }
+
+    val isServerAddressValid = remember(serverAddress) {
+        ValidatorUtils.isValidHostPort(serverAddress)
+    }
+    val isLocalPortValid = remember(localPort) {
+        ValidatorUtils.isValidHostPort(localPort)
+    }
 
     // Авто-сохранение с дебаунсом 600 мс на каждое изменение поля.
     // vlessMode исключён — сохраняется через setVlessMode с автоперезапуском сервера.
@@ -139,6 +148,7 @@ fun ClientSetupScreen(
                 OutlinedTextField(
                     value = rawCommand,
                     onValueChange = { rawCommand = it },
+                    isError = rawCommand.isBlank(),
                     label = { Text("Raw") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -148,6 +158,7 @@ fun ClientSetupScreen(
                     onValueChange = { if (!privacyMode) serverAddress = it },
                     label = { Text(stringResource(R.string.server_address_label)) },
                     placeholder = { Text(stringResource(R.string.server_address_placeholder)) },
+                    isError = !isServerAddressValid || serverAddress.isBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     readOnly = privacyMode,
@@ -159,6 +170,7 @@ fun ClientSetupScreen(
                     onValueChange = { if (!privacyMode) vkLink = it },
                     label = { Text(stringResource(R.string.vk_link_label)) },
                     placeholder = { Text(stringResource(R.string.vk_link_placeholder)) },
+                    isError = vkLink.isBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     readOnly = privacyMode,
@@ -170,6 +182,7 @@ fun ClientSetupScreen(
                     onValueChange = { if (!privacyMode) localPort = it },
                     label = { Text(stringResource(R.string.local_listen_address)) },
                     placeholder = { Text(stringResource(R.string.local_listen_placeholder)) },
+                    isError = !isLocalPortValid || localPort.isBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     readOnly = privacyMode,

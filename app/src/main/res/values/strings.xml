@@ -64,6 +64,8 @@
     <string name="wireproxy_public_key_placeholder">WG_PUBLIC_KEY</string>
     <string name="wireproxy_endpoint">Endpoint (host:port)</string>
     <string name="wireproxy_endpoint_placeholder">127.0.0.1:9000</string>
+    <string name="wireproxy_endpoint_mismatch">Не равен локальному адресу\nпрослушивания!</string>
+    <string name="wireproxy_endpoint_fix">Изменить?</string>
     <string name="wireproxy_allowed_ips">Allowed IPs</string>
     <string name="wireproxy_allowed_ips_placeholder">0.0.0.0/0</string>
     <string name="wireproxy_persistent_keepalive">Persistent Keepalive</string>

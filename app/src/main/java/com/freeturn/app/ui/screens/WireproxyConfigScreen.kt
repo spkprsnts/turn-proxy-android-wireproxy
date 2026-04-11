@@ -7,12 +7,14 @@ import android.content.ClipboardManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.R
 import com.freeturn.app.ui.HapticUtil
+import com.freeturn.app.ui.ValidatorUtils
 import com.freeturn.app.viewmodel.MainViewModel
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -35,6 +38,7 @@ fun WireproxyConfigScreen(
     val privacyMode by viewModel.privacyMode.collectAsStateWithLifecycle()
     val wgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
     val wgConfigText by viewModel.wgConfigText.collectAsStateWithLifecycle()
+    val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -53,6 +57,19 @@ fun WireproxyConfigScreen(
             }
         }
     )
+
+    val isHttpValid = remember(wgConfig.httpBindAddress) {
+        ValidatorUtils.isValidHostPort(wgConfig.httpBindAddress)
+    }
+    val isSocksValid = remember(wgConfig.socks5BindAddress) {
+        ValidatorUtils.isValidHostPort(wgConfig.socks5BindAddress)
+    }
+    val isEndpointValid = remember(wgConfig.endpoint) {
+        ValidatorUtils.isValidHostPort(wgConfig.endpoint)
+    }
+    val isTargetEndpoint = remember(wgConfig.endpoint) {
+        clientConfig.localPort == wgConfig.endpoint
+    }
 
     Scaffold(
         topBar = {
@@ -131,6 +148,7 @@ fun WireproxyConfigScreen(
                 value = wgConfig.httpBindAddress,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(httpBindAddress = it)) },
                 label = { Text(stringResource(R.string.wireproxy_http)) },
+                isError = !isHttpValid,
                 placeholder = { Text(stringResource(R.string.wireproxy_http_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -139,6 +157,7 @@ fun WireproxyConfigScreen(
                 value = wgConfig.socks5BindAddress,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(socks5BindAddress = it)) },
                 label = { Text(stringResource(R.string.wireproxy_socks5)) },
+                isError = !isSocksValid,
                 placeholder = { Text(stringResource(R.string.wireproxy_socks5_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -200,6 +219,30 @@ fun WireproxyConfigScreen(
                 value = wgConfig.endpoint,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(endpoint = it)) },
                 label = { Text(stringResource(R.string.wireproxy_endpoint)) },
+                isError = !isTargetEndpoint || !isEndpointValid,
+                supportingText = {
+                    if (!isTargetEndpoint) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.wireproxy_endpoint_mismatch),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = stringResource(R.string.wireproxy_endpoint_fix),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable {
+                                    viewModel.updateWgConfig(wgConfig.copy(endpoint = clientConfig.localPort))
+                                }
+                            )
+                        }
+                    }
+                },
                 placeholder = { Text(stringResource(R.string.wireproxy_endpoint_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )

@@ -37,8 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.R
 import com.freeturn.app.ui.HapticUtil
-import com.freeturn.app.ui.theme.StatusGreen
-import com.freeturn.app.ui.theme.StatusOrange
 import com.freeturn.app.viewmodel.MainViewModel
 
 @Composable
@@ -129,8 +127,8 @@ private fun LogLine(line: String) {
 
     val textColor = when {
         isError   -> MaterialTheme.colorScheme.error
-        isWarning -> StatusOrange
-        isSuccess -> StatusGreen
+        isWarning -> MaterialTheme.colorScheme.tertiary
+        isSuccess -> MaterialTheme.colorScheme.primary
         isHeader  -> MaterialTheme.colorScheme.primary
         else      -> MaterialTheme.colorScheme.onSurfaceVariant
     }

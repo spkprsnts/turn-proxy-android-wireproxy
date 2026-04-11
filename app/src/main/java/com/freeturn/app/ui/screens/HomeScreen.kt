@@ -88,14 +88,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import com.freeturn.app.ui.HapticUtil
-import com.freeturn.app.ui.theme.StatusGreen
-import com.freeturn.app.ui.theme.StatusGreenDark
 import com.freeturn.app.viewmodel.MainViewModel
 import com.freeturn.app.viewmodel.ProxyState
 import com.freeturn.app.viewmodel.UpdateState
 import androidx.core.net.toUri
-import com.freeturn.app.ui.theme.StatusOrange
-import com.freeturn.app.ui.theme.StatusOrangeDark
 
 @SuppressLint("BatteryLife")
 @Composable
@@ -210,8 +206,8 @@ fun HomeScreen(
                 },
                 style = MaterialTheme.typography.titleMedium,
                 color = when (proxyState) {
-                    is ProxyState.Working -> StatusGreen
-                    is ProxyState.Running, is ProxyState.CaptchaRequired -> StatusOrange
+                    is ProxyState.Working -> MaterialTheme.colorScheme.primary
+                    is ProxyState.Running, is ProxyState.CaptchaRequired -> MaterialTheme.colorScheme.tertiary
                     is ProxyState.Error -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
                 },
@@ -225,7 +221,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = StatusGreenDark.copy(alpha = 0.15f)
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
                 )
             ) {
                 Row(
@@ -240,7 +236,7 @@ fun HomeScreen(
                             R.drawable.check_circle_24px
                         ),
                         contentDescription = null,
-                        tint = StatusGreen,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(36.dp)
                     )
 
@@ -252,7 +248,7 @@ fun HomeScreen(
                         )
                         Text(
                             text = "Активен",
-                            color = StatusGreen,
+                            color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -448,22 +444,22 @@ private fun UpdateDialogs(viewModel: MainViewModel) {
 private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
     val containerColor by animateColorAsState(
         targetValue = when (state) {
-            is ProxyState.Working -> StatusGreenDark
-            is ProxyState.Running, is ProxyState.CaptchaRequired -> StatusOrangeDark
+            is ProxyState.Working -> MaterialTheme.colorScheme.primary
+            is ProxyState.Running, is ProxyState.CaptchaRequired -> MaterialTheme.colorScheme.tertiary
             is ProxyState.Error -> MaterialTheme.colorScheme.errorContainer
             is ProxyState.Starting -> MaterialTheme.colorScheme.secondaryContainer
-            else -> MaterialTheme.colorScheme.primaryContainer
+            else -> MaterialTheme.colorScheme.surfaceVariant
         },
         animationSpec = tween(600),
         label = "btn_bg"
     )
     val contentColor by animateColorAsState(
         targetValue = when (state) {
-            is ProxyState.Working -> StatusGreen
-            is ProxyState.Running, is ProxyState.CaptchaRequired -> StatusOrange
+            is ProxyState.Working -> MaterialTheme.colorScheme.onPrimary
+            is ProxyState.Running, is ProxyState.CaptchaRequired -> MaterialTheme.colorScheme.onTertiary
             is ProxyState.Error -> MaterialTheme.colorScheme.onErrorContainer
             is ProxyState.Starting -> MaterialTheme.colorScheme.onSecondaryContainer
-            else -> MaterialTheme.colorScheme.onPrimaryContainer
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
         },
         animationSpec = tween(600),
         label = "btn_fg"

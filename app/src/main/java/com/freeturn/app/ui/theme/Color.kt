@@ -88,11 +88,3 @@ val surfaceContainerLowDark = Color(0xFF1A1A1E)
 val surfaceContainerDark = Color(0xFF1F1F23)
 val surfaceContainerHighDark = Color(0xFF2B2B2F)
 val surfaceContainerHighestDark = Color(0xFF36363A)
-
-
-
-val StatusGreen = Color(0xFF4CAF50)
-val StatusGreenDark = Color(0xFF1B5E20)
-val StatusBlue = Color(0xFF2196F3)
-val StatusOrange = Color(0xFFE67E22)
-val StatusOrangeDark = Color(0xFF93540F)
