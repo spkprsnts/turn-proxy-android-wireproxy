@@ -5,13 +5,19 @@
 
 package com.freeturn.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -65,12 +72,16 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -79,19 +90,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.freeturn.app.ui.HapticUtil
 import com.freeturn.app.viewmodel.MainViewModel
 import com.freeturn.app.viewmodel.ProxyState
 import com.freeturn.app.viewmodel.UpdateState
 import androidx.core.net.toUri
+import com.freeturn.app.WireproxyServiceState
+import com.freeturn.app.viewmodel.WireproxyState
 
 @SuppressLint("BatteryLife")
 @Composable
@@ -100,9 +120,25 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val proxyState by viewModel.proxyState.collectAsStateWithLifecycle()
+    val wireproxyState by WireproxyServiceState.state.collectAsStateWithLifecycle()
     val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
     val customKernelExists by viewModel.customKernelExists.collectAsStateWithLifecycle()
     val isConfigured = clientConfig.serverAddress.isNotBlank() || (clientConfig.isRawMode && clientConfig.rawCommand.isNotBlank())
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (WireproxyServiceState.state.value == WireproxyState.Running) {
+                    viewModel.checkWireproxyPing()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Запрос разрешений при первом открытии главного экрана
     val batteryOptLauncher = rememberLauncherForActivityResult(
@@ -164,7 +200,8 @@ fun HomeScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { padding ->
         Column(
             modifier = Modifier
@@ -201,7 +238,7 @@ fun HomeScreen(
                     is ProxyState.Starting -> stringResource(R.string.proxy_starting)
                     is ProxyState.Running -> stringResource(R.string.proxy_connecting)
                     is ProxyState.Error -> (proxyState as ProxyState.Error).message
-                    is ProxyState.CaptchaRequired -> "Требуется прохождение капчи"
+                    is ProxyState.CaptchaRequired -> stringResource(R.string.proxy_captcha_required)
                     else -> stringResource(R.string.proxy_press_to_start)
                 },
                 style = MaterialTheme.typography.titleMedium,
@@ -216,44 +253,192 @@ fun HomeScreen(
 
             Spacer(Modifier.height(21.dp))
 
+            val wireproxyPing by viewModel.wireproxyPing.collectAsStateWithLifecycle()
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
-                )
+                    .padding(horizontal = 24.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(
-                            R.drawable.check_circle_24px
-                        ),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(36.dp)
-                    )
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        when(wireproxyState) {
+                            WireproxyState.Idle -> Icon(
+                                painter = painterResource(
+                                    R.drawable.stop_24px
+                                ),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            WireproxyState.Starting -> CircularWavyProgressIndicator(modifier = Modifier.size(36.dp))
+                            WireproxyState.Running -> Icon(
+                                painter = painterResource(
+                                    R.drawable.check_circle_24px
+                                ),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
 
-                    Column(modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.Center) {
-                        Text(
-                            text = "WireProxy",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = "Активен",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodyMedium
+                        Column(modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center) {
+                            Text(
+                                text = stringResource(R.string.wireproxy_title),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = when(wireproxyState) {
+                                    WireproxyState.Idle -> stringResource(R.string.wireproxy_idle)
+                                    WireproxyState.Starting -> stringResource(R.string.wireproxy_starting_state)
+                                    WireproxyState.Running -> stringResource(R.string.wireproxy_running_state)
+                                },
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        Switch(
+                            checked = clientConfig.wireproxyEnabled,
+                            onCheckedChange = { enabled ->
+                                HapticUtil.perform(
+                                    context,
+                                    if (enabled) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF
+                                )
+                                viewModel.saveClientConfig(clientConfig.copy(wireproxyEnabled = enabled))
+
+                                // Если основной прокси уже запущен, переключаем wireproxy на лету
+                                if (proxyState is ProxyState.Working || proxyState is ProxyState.Running || proxyState is ProxyState.CaptchaRequired) {
+                                    if (enabled) {
+                                        viewModel.startWireproxy()
+                                    } else {
+                                        viewModel.stopWireproxy()
+                                    }
+                                }
+                            }
                         )
                     }
 
-                    Switch(checked = true, onCheckedChange = { }, enabled = true)
+                    AnimatedVisibility(
+                        visible = wireproxyState == WireproxyState.Running,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                                            viewModel.checkWireproxyPing()
+                                        }
+                                        .padding(vertical = 18.dp, horizontal = 26.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.wifi_24px),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .size(18.dp)
+                                                .offset(y = (-1).dp)
+                                        )
+//                                    Text(
+//                                        text = stringResource(R.string.ping_label),
+//                                        style = MaterialTheme.typography.bodyMedium
+//                                    )
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Box(
+                                        modifier = Modifier.widthIn(min = 50.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        when (val ping = wireproxyPing) {
+                                            is MainViewModel.PingResult.Loading -> {
+                                                CircularWavyProgressIndicator(modifier = Modifier.size(16.dp))
+                                            }
+
+                                            is MainViewModel.PingResult.Success -> {
+                                                Text(
+                                                    text = stringResource(R.string.ping_ms, ping.ms),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = when {
+                                                        ping.ms < 100 -> Color(0xFF4CAF50)
+                                                        ping.ms < 300 -> Color(0xFFFFC107)
+                                                        else -> Color(0xFFF44336)
+                                                    },
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+
+                                            is MainViewModel.PingResult.Error -> {
+                                                Text(
+                                                    text = stringResource(R.string.ping_error),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+
+                                            null -> {
+                                                Text(
+                                                    text = "?",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                val wgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
+                                val clipboardManager = LocalClipboardManager.current
+                                val scope = rememberCoroutineScope()
+
+                                if (wgConfig.httpBindAddress.isNotBlank()) {
+                                    ProxyCopyRow(
+                                        label = stringResource(R.string.wireproxy_http),
+                                        address = wgConfig.httpBindAddress,
+                                        onCopy = {
+                                            clipboardManager.setText(AnnotatedString(it))
+                                            HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("HTTP прокси скопирован")
+                                            }
+                                        }
+                                    )
+                                }
+                                if (wgConfig.socks5BindAddress.isNotBlank()) {
+                                    ProxyCopyRow(
+                                        label = stringResource(R.string.wireproxy_socks5),
+                                        address = wgConfig.socks5BindAddress,
+                                        onCopy = {
+                                            clipboardManager.setText(AnnotatedString(it))
+                                            HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("SOCKS5 прокси скопирован")
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -845,4 +1030,43 @@ private fun ConfigRow(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodySmall)
     }
     Spacer(Modifier.height(4.dp))
+}
+
+@Composable
+private fun ProxyCopyRow(
+    label: String,
+    address: String,
+    onCopy: (String) -> Unit
+) {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 24.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCopy(address) }
+            .padding(vertical = 12.dp, horizontal = 26.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                address,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        Icon(
+            painter = painterResource(R.drawable.content_copy_24px),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+    }
 }

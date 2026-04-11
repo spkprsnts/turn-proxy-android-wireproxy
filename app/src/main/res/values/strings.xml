@@ -18,7 +18,11 @@
     <string name="local_port">Локальный порт</string>
     <string name="proxy_active_stop">Прокси активен — нажмите для остановки</string>
     <string name="proxy_error_restart">Ошибка — нажмите для повторного запуска</string>
+    <string name="proxy_captcha_required">Требуется прохождение капчи</string>
     <string name="start_proxy">Запустить прокси</string>
+    <string name="wireproxy_idle">Остановлен</string>
+    <string name="wireproxy_starting_state">Запускается</string>
+    <string name="wireproxy_running_state">Запущен</string>
     <string name="connection">Соединение</string>
     <string name="not_connected">Не сопряжено</string>
     <string name="connected_format">Сопряжено: %1$s</string>
@@ -70,6 +74,8 @@
     <string name="wireproxy_allowed_ips_placeholder">0.0.0.0/0</string>
     <string name="wireproxy_persistent_keepalive">Persistent Keepalive</string>
     <string name="wireproxy_persistent_keepalive_placeholder">25</string>
+    <string name="wireproxy_http_copied">HTTP прокси скопирован</string>
+    <string name="wireproxy_socks5_copied">SOCKS5 прокси скопирован</string>
 
 
     <!-- ClientSetupScreen -->
@@ -99,6 +105,8 @@
     <string name="manual_captcha_desc">Решать капчу вручную вместо автоматического распознавания</string>
     <string name="force_turn_port_443">TURN-порт 443</string>
     <string name="force_turn_port_443_desc">Использовать порт 443 вместо стандартного.\nПомогает в сетях, где порт 19302 заблокирован</string>
+    <string name="wireproxy_enabled">Включить Wireproxy</string>
+    <string name="wireproxy_enabled_desc">Запускать Wireproxy вместе с основным прокси</string>
     <string name="core_title">Ядро</string>
     <string name="custom_core">Кастомное ядро</string>
     <string name="builtin_core">Встроенное ядро</string>
@@ -144,4 +152,8 @@
     <string name="theme_system">Системная</string>
     <string name="privacy_mode_title">Приватный режим</string>
     <string name="privacy_mode_desc">Скрывает IP и порты</string>
+
+    <string name="ping_label">Пинг Wireproxy</string>
+    <string name="ping_error">Ошибка</string>
+    <string name="ping_ms">%1$d мс</string>
 </resources>

@@ -29,7 +29,8 @@ data class ClientConfig(
     val isRawMode: Boolean = false,
     val rawCommand: String = "",
     val vlessMode: Boolean = false,
-    val forceTurnPort443: Boolean = false
+    val forceTurnPort443: Boolean = false,
+    val wireproxyEnabled: Boolean = false
 )
 
 enum class ThemeMode {
@@ -56,6 +57,7 @@ class AppPreferences(context: Context) {
         val CLIENT_FORCE_PORT_443 = booleanPreferencesKey("client_force_port_443")
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val WIREPROXY_ENABLED = booleanPreferencesKey("wireproxy_enabled")
     }
 
     // Шифрованное хранилище для SSH-пароля и ключа (Android Keystore + AES-256)
@@ -88,7 +90,8 @@ class AppPreferences(context: Context) {
                 isRawMode = prefs[CLIENT_IS_RAW] ?: false,
                 rawCommand = prefs[CLIENT_RAW_CMD] ?: "",
                 vlessMode = prefs[CLIENT_VLESS] ?: false,
-                forceTurnPort443 = prefs[CLIENT_FORCE_PORT_443] ?: false
+                forceTurnPort443 = prefs[CLIENT_FORCE_PORT_443] ?: false,
+                wireproxyEnabled = prefs[WIREPROXY_ENABLED] ?: false
             )
         }
 
@@ -119,6 +122,7 @@ class AppPreferences(context: Context) {
             prefs[CLIENT_RAW_CMD] = config.rawCommand
             prefs[CLIENT_VLESS] = config.vlessMode
             prefs[CLIENT_FORCE_PORT_443] = config.forceTurnPort443
+            prefs[WIREPROXY_ENABLED] = config.wireproxyEnabled
         }
     }
 

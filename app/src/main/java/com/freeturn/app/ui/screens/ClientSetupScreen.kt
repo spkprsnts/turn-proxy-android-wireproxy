@@ -118,7 +118,8 @@ fun ClientSetupScreen(
                 manualCaptcha    = manualCaptcha,
                 localPort        = localPort.trim(),
                 vlessMode        = vlessMode,
-                forceTurnPort443 = forcePort443
+                forceTurnPort443 = forcePort443,
+                wireproxyEnabled = saved.wireproxyEnabled
             )
         )
     }

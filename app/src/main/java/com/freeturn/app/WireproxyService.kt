@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.freeturn.app.viewmodel.WireproxyState
 import kotlinx.coroutines.*
 import java.io.BufferedReader
 import java.io.File
@@ -31,6 +32,7 @@ class WireproxyService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        WireproxyServiceState.updateStatus(WireproxyState.Starting)
         val openAppIntent = packageManager.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
         }
@@ -77,6 +79,7 @@ class WireproxyService : Service() {
                     .start()
             }
             process.set(proc)
+            WireproxyServiceState.updateStatus(WireproxyState.Running)
 
             BufferedReader(InputStreamReader(proc.inputStream)).use { reader ->
                 var line: String?
@@ -101,6 +104,7 @@ class WireproxyService : Service() {
         super.onDestroy()
         process.get()?.destroyForcibly()
         serviceScope.cancel()
+        WireproxyServiceState.updateStatus(WireproxyState.Idle)
     }
 
     companion object {

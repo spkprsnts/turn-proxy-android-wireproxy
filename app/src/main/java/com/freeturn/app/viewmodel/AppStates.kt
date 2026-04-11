@@ -1,5 +1,12 @@
 package com.freeturn.app.viewmodel
 
+// Wireproxy states
+sealed class WireproxyState {
+    object Idle : WireproxyState()
+    object Starting : WireproxyState()
+    object Running : WireproxyState()
+}
+
 // Local proxy client states
 sealed class ProxyState {
     object Idle : ProxyState()

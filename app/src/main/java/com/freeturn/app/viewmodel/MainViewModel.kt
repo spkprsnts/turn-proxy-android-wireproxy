@@ -9,20 +9,30 @@ import androidx.lifecycle.viewModelScope
 import com.freeturn.app.ProxyService
 import com.freeturn.app.WireproxyService
 import com.freeturn.app.ProxyServiceState
+import com.freeturn.app.WireproxyServiceState
 import com.freeturn.app.data.AppPreferences
 import com.freeturn.app.data.ClientConfig
 import com.freeturn.app.data.ThemeMode
 import com.freeturn.app.domain.AppUpdater
 import com.freeturn.app.domain.LocalProxyManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.Socket
+import kotlin.system.measureTimeMillis
 
 data class WgConfig(
     val privateKey: String = "",
@@ -33,9 +43,14 @@ data class WgConfig(
     val endpoint: String = "",
     val allowedIps: String = "",
     val persistentKeepalive: String = "",
-    val httpBindAddress: String = "127.0.0.1:8080",
-    val socks5BindAddress: String = "127.0.0.1:1080"
-)
+    val httpBindAddress: String = DEFAULT_HTTP_BIND_ADDRESS,
+    val socks5BindAddress: String = DEFAULT_SOCKS5_BIND_ADDRESS
+) {
+    companion object {
+        const val DEFAULT_HTTP_BIND_ADDRESS = "127.0.0.1:8080"
+        const val DEFAULT_SOCKS5_BIND_ADDRESS = "127.0.0.1:2080"
+    }
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -58,6 +73,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _wgConfig = MutableStateFlow(WgConfig())
     val wgConfig: StateFlow<WgConfig> = _wgConfig.asStateFlow()
 
+    // Custom kernel
+    private val _kernelError = MutableStateFlow<String?>(null)
+    val kernelError: StateFlow<String?> = _kernelError.asStateFlow()
+
+    private val _wireproxyPing = MutableStateFlow<PingResult?>(null)
+    val wireproxyPing: StateFlow<PingResult?> = _wireproxyPing.asStateFlow()
+
+    private var pingJob: Job? = null
+
     init {
         loadWgConfig()
         viewModelScope.launch {
@@ -75,6 +99,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             proxyManager.observeProxyServiceWorking()
+        }
+        viewModelScope.launch {
+            WireproxyServiceState.state
+                .map { it is WireproxyState.Running }
+                .distinctUntilChanged()
+                .collect { isRunning ->
+                    if (isRunning) {
+                        checkWireproxyPing()
+                    } else {
+                        _wireproxyPing.value = null
+                    }
+                }
         }
         proxyManager.syncInitialState()
     }
@@ -110,12 +146,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Local proxy
     fun startProxy() {
         viewModelScope.launch {
+            if (clientConfig.value.wireproxyEnabled && !isValidHostPort(_wgConfig.value.socks5BindAddress)) {
+                updateWgConfig(_wgConfig.value.copy(socks5BindAddress = WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS))
+            }
             proxyManager.startProxy(clientConfig.value)
         }
     }
 
     fun stopProxy() {
         proxyManager.stopProxy()
+    }
+
+    fun startWireproxy() {
+        if (!isValidHostPort(_wgConfig.value.socks5BindAddress)) {
+            updateWgConfig(_wgConfig.value.copy(socks5BindAddress = WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS))
+        }
+        proxyManager.startWireproxy()
+    }
+
+    fun stopWireproxy() {
+        proxyManager.stopWireproxy()
     }
 
     fun dismissCaptcha() {
@@ -135,9 +185,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { prefs.setOnboardingDone(true) }
     }
 
-    // Custom kernel
-    private val _kernelError = MutableStateFlow<String?>(null)
-    val kernelError: StateFlow<String?> = _kernelError.asStateFlow()
+    fun checkWireproxyPing() {
+        val socksAddr = _wgConfig.value.socks5BindAddress
+        if (!isValidHostPort(socksAddr) || socksAddr.isBlank()) return
+
+        pingJob?.cancel()
+        pingJob = viewModelScope.launch {
+            _wireproxyPing.value = PingResult.Loading
+            
+            var lastError: String? = null
+            repeat(5) { attempt ->
+                // Отменяем, если Wireproxy перестал работать
+                if (WireproxyServiceState.state.value != WireproxyState.Running) {
+                    _wireproxyPing.value = null
+                    return@launch
+                }
+
+                val result = withContext(Dispatchers.IO) {
+                    try {
+                        val parts = socksAddr.split(":")
+                        val proxyHost = parts[0]
+                        val proxyPort = parts[1].toInt()
+
+                        val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress(proxyHost, proxyPort))
+                        val time = measureTimeMillis {
+                            Socket(proxy).use { socket ->
+                                socket.connect(InetSocketAddress("1.1.1.1", 53), 2000)
+                            }
+                        }
+                        PingResult.Success(time)
+                    } catch (e: Exception) {
+                        lastError = e.message ?: "Unknown error"
+                        null
+                    }
+                }
+
+                if (result is PingResult.Success) {
+                    _wireproxyPing.value = result
+                    return@launch
+                }
+                
+                if (attempt < 2) delay(500) // Пауза перед следующей попыткой
+            }
+            
+            _wireproxyPing.value = PingResult.Error(lastError ?: "Failed after 3 attempts")
+        }
+    }
 
     fun setCustomKernel(uri: Uri) {
         viewModelScope.launch {
@@ -202,10 +295,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun isValidHostPort(address: String): Boolean {
+        return try {
+            val parts = address.split(":")
+            if (parts.size != 2) return false
+            val host = parts[0]
+            val port = parts[1].toInt()
+            host.isNotBlank() && port in 1..65535
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun parseWgConfig(text: String): WgConfig {
         var privateKey = ""; var address = ""; var dns = ""; var mtu = "1280"
         var publicKey = ""; var endpoint = "127.0.0.1:9000"; var allowedIps = ""; var persistentKeepalive = "25"
-        var httpBindAddress = "127.0.0.1:8080"; var socks5BindAddress = "127.0.0.1:2080"
+        var httpBindAddress = WgConfig.DEFAULT_HTTP_BIND_ADDRESS; var socks5BindAddress = WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS
 
         var currentSection = ""
         text.lineSequence().forEach { line ->
@@ -235,6 +340,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         return WgConfig(privateKey, address, dns, mtu, publicKey, endpoint, allowedIps, persistentKeepalive, httpBindAddress, socks5BindAddress)
+    }
+
+    sealed class PingResult {
+        object Loading : PingResult()
+        data class Success(val ms: Long) : PingResult()
+        data class Error(val message: String) : PingResult()
     }
 
     private fun WgConfig.toWgString(): String {

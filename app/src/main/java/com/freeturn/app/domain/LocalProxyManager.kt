@@ -108,16 +108,22 @@ class LocalProxyManager(private val context: Context) {
         ProxyServiceState.clearLogs()
         ProxyServiceState.setStartupResult(null)
         
-        // Start both services: vk-turn-proxy and wireproxy
+        // Start services
         val intent = Intent(context, ProxyService::class.java)
-        val wireproxyIntent = Intent(context, WireproxyService::class.java)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
-            context.startForegroundService(wireproxyIntent)
         } else {
             context.startService(intent)
-            context.startService(wireproxyIntent)
+        }
+
+        if (cfg.wireproxyEnabled) {
+            val wireproxyIntent = Intent(context, WireproxyService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(wireproxyIntent)
+            } else {
+                context.startService(wireproxyIntent)
+            }
         }
 
         val result = withTimeoutOrNull(5_000L) {
@@ -143,8 +149,21 @@ class LocalProxyManager(private val context: Context) {
 
     fun stopProxy() {
         context.stopService(Intent(context, ProxyService::class.java))
-        context.stopService(Intent(context, WireproxyService::class.java))
+        stopWireproxy()
         _proxyState.value = ProxyState.Idle
+    }
+
+    fun startWireproxy() {
+        val wireproxyIntent = Intent(context, WireproxyService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(wireproxyIntent)
+        } else {
+            context.startService(wireproxyIntent)
+        }
+    }
+
+    fun stopWireproxy() {
+        context.stopService(Intent(context, WireproxyService::class.java))
     }
 
     fun dismissCaptcha() {
