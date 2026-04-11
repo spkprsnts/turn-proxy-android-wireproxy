@@ -49,7 +49,7 @@
     <string name="wireproxy_socks5">SOCKS5</string>
     <string name="wireproxy_socks5_placeholder">127.0.0.1:1080</string>
     <string name="wireproxy_edit_config">Редактирование WG конфига</string>
-    <string name="wireproxy_config_placeholder">[Interface]\nPrivateKey = ...\n\n[Peer]\nPublicKey = ...</string>
+    <string name="wireproxy_config_placeholder">[Interface]\nPrivateKey = …\n\n[Peer]\nPublicKey = …</string>
     <string name="wireproxy_interface">Interface</string>
     <string name="wireproxy_private_key">Private Key</string>
     <string name="wireproxy_private_key_placeholder">WG_PRIVATE_KEY</string>

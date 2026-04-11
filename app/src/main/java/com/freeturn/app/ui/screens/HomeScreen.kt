@@ -84,7 +84,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -95,7 +94,6 @@ import com.freeturn.app.viewmodel.MainViewModel
 import com.freeturn.app.viewmodel.ProxyState
 import com.freeturn.app.viewmodel.UpdateState
 import androidx.core.net.toUri
-import com.freeturn.app.ui.theme.StatusBlue
 import com.freeturn.app.ui.theme.StatusOrange
 import com.freeturn.app.ui.theme.StatusOrangeDark
 
