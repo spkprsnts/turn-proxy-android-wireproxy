@@ -52,7 +52,8 @@ fun WireproxyConfigScreen(
                     }
                 } catch (e: Exception) {
                     val errorMessage = context.getString(R.string.wireproxy_import_error)
-                    Toast.makeText(context, "$errorMessage: ${e.message}", Toast.LENGTH_LONG).show()
+                    val fullError = context.getString(R.string.error_with_details, errorMessage, e.message ?: "")
+                    Toast.makeText(context, fullError, Toast.LENGTH_LONG).show()
                 }
             }
         }

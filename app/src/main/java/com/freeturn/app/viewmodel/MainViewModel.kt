@@ -228,7 +228,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (attempt < 2) delay(500) // Пауза перед следующей попыткой
             }
             
-            _wireproxyPing.value = PingResult.Error(lastError ?: "Failed after 3 attempts")
+            _wireproxyPing.value = PingResult.Error(lastError ?: "")
         }
     }
 

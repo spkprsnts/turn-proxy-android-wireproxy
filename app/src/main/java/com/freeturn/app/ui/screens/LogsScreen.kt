@@ -127,7 +127,7 @@ private fun LogLine(line: String) {
     val isSuccess = lower.contains("запущен") || lower.contains("подключен") ||
                     lower.contains("success") || lower.contains("started") ||
                     lower.contains("ok") || lower.contains("established") ||
-                    lower.contains("received handshake")
+                    lower.contains("received handshake") || lower.contains("connected")
 
     val textColor = when {
         isError   -> MaterialTheme.colorScheme.error

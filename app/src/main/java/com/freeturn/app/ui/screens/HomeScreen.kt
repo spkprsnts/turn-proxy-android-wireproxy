@@ -409,6 +409,8 @@ fun HomeScreen(
                                 val wgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
                                 val clipboardManager = LocalClipboardManager.current
                                 val scope = rememberCoroutineScope()
+                                val httpCopiedText = stringResource(R.string.wireproxy_http_copied)
+                                val socks5CopiedText = stringResource(R.string.wireproxy_socks5_copied)
 
                                 if (wgConfig.httpBindAddress.isNotBlank()) {
                                     ProxyCopyRow(
@@ -418,7 +420,7 @@ fun HomeScreen(
                                             clipboardManager.setText(AnnotatedString(it))
                                             HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
                                             scope.launch {
-                                                snackbarHostState.showSnackbar("HTTP прокси скопирован")
+                                                snackbarHostState.showSnackbar(httpCopiedText)
                                             }
                                         }
                                     )
@@ -431,7 +433,7 @@ fun HomeScreen(
                                             clipboardManager.setText(AnnotatedString(it))
                                             HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
                                             scope.launch {
-                                                snackbarHostState.showSnackbar("SOCKS5 прокси скопирован")
+                                                snackbarHostState.showSnackbar(socks5CopiedText)
                                             }
                                         }
                                     )
@@ -1014,7 +1016,10 @@ private fun RepoLinkItem(
 }
 
 
-internal fun String.redact(enabled: Boolean) = if (enabled) "••••••" else this
+@Composable
+internal fun String.redact(enabled: Boolean): String {
+    return if (enabled) stringResource(R.string.redacted_value) else this
+}
 
 @Composable
 private fun ConfigRow(label: String, value: String) {

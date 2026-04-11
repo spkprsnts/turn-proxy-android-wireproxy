@@ -157,7 +157,7 @@ fun ClientSetupScreen(
                     value = rawCommand,
                     onValueChange = { rawCommand = it },
                     isError = rawCommand.isBlank(),
-                    label = { Text("Raw") },
+                    label = { Text(stringResource(R.string.raw_label)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
@@ -191,8 +191,8 @@ fun ClientSetupScreen(
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     SwitchRow(
-                        label = "Telemost DC",
-                        description = "Иcпользовать Datachannel для передачи данных в Telemost",
+                        label = stringResource(R.string.telemost_dc_label),
+                        description = stringResource(R.string.telemost_dc_desc),
                         checked = telemostDc,
                         onCheckedChange = {
                             HapticUtil.perform(

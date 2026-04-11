@@ -32,6 +32,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
+import androidx.compose.ui.res.stringResource
+import com.freeturn.app.R
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun CaptchaWebViewDialog(
@@ -54,11 +57,11 @@ fun CaptchaWebViewDialog(
                     title = {
                         Column {
                             Text(
-                                "Проверка VK",
+                                stringResource(R.string.captcha_title),
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                "Пройдите проверку для продолжения",
+                                stringResource(R.string.captcha_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -66,7 +69,7 @@ fun CaptchaWebViewDialog(
                     },
                     actions = {
                         TextButton(onClick = onDismiss) {
-                            Text("Закрыть")
+                            Text(stringResource(R.string.btn_close))
                         }
                     }
                 )

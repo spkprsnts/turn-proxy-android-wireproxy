@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.FileProvider
+import com.freeturn.app.R
 import com.freeturn.app.viewmodel.UpdateState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +42,7 @@ class AppUpdater(private val context: Context) {
             val release = withContext(Dispatchers.IO) { fetchLatestRelease() }
             if (release == null) {
                 _state.value = if (silent) UpdateState.Idle
-                else UpdateState.Error("Не удалось получить информацию о релизе")
+                else UpdateState.Error(context.getString(R.string.error_release_info_failed))
                 return
             }
 
@@ -54,20 +55,20 @@ class AppUpdater(private val context: Context) {
                     _state.value = UpdateState.Available(remoteVersion, changelog)
                 } else {
                     _state.value = if (silent) UpdateState.Idle
-                    else UpdateState.Error("APK не найден в релизе")
+                    else UpdateState.Error(context.getString(R.string.error_apk_not_found))
                 }
             } else {
                 _state.value = UpdateState.NoUpdate
             }
         } catch (_: Exception) {
             _state.value = if (silent) UpdateState.Idle
-            else UpdateState.Error("Нет соединения с сервером")
+            else UpdateState.Error(context.getString(R.string.error_no_connection))
         }
     }
 
     suspend fun downloadUpdate() {
         val url = latestApkUrl ?: run {
-            _state.value = UpdateState.Error("URL обновления не найден")
+            _state.value = UpdateState.Error(context.getString(R.string.error_update_url_not_found))
             return
         }
 
@@ -100,13 +101,13 @@ class AppUpdater(private val context: Context) {
             _state.value = UpdateState.ReadyToInstall
         } catch (e: Exception) {
             apkFile.delete()
-            _state.value = UpdateState.Error("Ошибка загрузки: ${e.message}")
+            _state.value = UpdateState.Error(context.getString(R.string.error_download_failed, e.message))
         }
     }
 
     fun installUpdate() {
         if (!apkFile.exists()) {
-            _state.value = UpdateState.Error("Файл обновления не найден")
+            _state.value = UpdateState.Error(context.getString(R.string.error_update_file_not_found))
             return
         }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import com.freeturn.app.R
 import com.freeturn.app.ProxyService
 import com.freeturn.app.WireproxyService
 import com.freeturn.app.ProxyServiceState
@@ -42,7 +43,7 @@ class LocalProxyManager(private val context: Context) {
 
     suspend fun observeProxyLifecycle() {
         ProxyServiceState.proxyFailed.collect {
-            setErrorWithAutoReset("Прокси упал ${ProxyService.MAX_RESTARTS} раз — проверьте настройки")
+            setErrorWithAutoReset(context.getString(R.string.error_proxy_crashed, ProxyService.MAX_RESTARTS))
         }
     }
 
@@ -95,11 +96,11 @@ class LocalProxyManager(private val context: Context) {
         if (_proxyState.value is ProxyState.Error) _proxyState.value = ProxyState.Idle
 
         if (!cfg.isRawMode && (cfg.serverAddress.isBlank() || cfg.vkLink.isBlank())) {
-            setErrorWithAutoReset("Не заполнены настройки клиента")
+            setErrorWithAutoReset(context.getString(R.string.error_settings_empty))
             return
         }
         if (cfg.isRawMode && cfg.rawCommand.isBlank()) {
-            setErrorWithAutoReset("Не задана raw-команда")
+            setErrorWithAutoReset(context.getString(R.string.error_raw_empty))
             return
         }
 
@@ -135,7 +136,7 @@ class LocalProxyManager(private val context: Context) {
         when (result) {
             null -> {
                 stopProxy()
-                setErrorWithAutoReset("Прокси не запустился")
+                setErrorWithAutoReset(context.getString(R.string.error_proxy_not_started))
             }
             is StartupResult.Failed -> {
                 stopProxy()
@@ -188,7 +189,7 @@ class LocalProxyManager(private val context: Context) {
             val ELF_MAGIC = byteArrayOf(0x7F, 0x45, 0x4C, 0x46) // \x7FELF
 
             val inputStream = context.contentResolver.openInputStream(uri)
-                ?: return@withContext "Не удалось открыть файл"
+                ?: return@withContext context.getString(R.string.error_file_open)
 
             // Читаем первые 4 байта для проверки ELF-магии
             val header = ByteArray(4)
@@ -196,7 +197,7 @@ class LocalProxyManager(private val context: Context) {
             inputStream.close()
 
             if (headerRead < 4 || !header.contentEquals(ELF_MAGIC)) {
-                return@withContext "Файл не является ELF-бинарником. Убедитесь, что загружаете правильное ядро"
+                return@withContext context.getString(R.string.error_not_elf)
             }
 
             // Копируем файл
@@ -207,11 +208,11 @@ class LocalProxyManager(private val context: Context) {
 
             if (dest.length() == 0L) {
                 dest.delete()
-                return@withContext "Файл пустой"
+                return@withContext context.getString(R.string.error_file_empty)
             }
             if (dest.length() > MAX_SIZE) {
                 dest.delete()
-                return@withContext "Файл слишком большой (максимум 100 МБ)"
+                return@withContext context.getString(R.string.error_file_too_large, MAX_SIZE / 1024 / 1024)
             }
 
             dest.setExecutable(true, false)
@@ -219,18 +220,18 @@ class LocalProxyManager(private val context: Context) {
                 Runtime.getRuntime().exec(arrayOf("chmod", "755", dest.absolutePath)).waitFor()
             } catch (_: Exception) {}
             withContext(Dispatchers.Main) { _customKernelExists.value = true }
-            ProxyServiceState.addLog("Кастомное ядро установлено: ${dest.length() / 1024} КБ")
+            ProxyServiceState.addLog(context.getString(R.string.log_custom_kernel_installed, dest.length() / 1024))
             null
         } catch (e: Exception) {
-            ProxyServiceState.addLog("Ошибка установки ядра: ${e.message}")
-            "Ошибка: ${e.message}"
+            ProxyServiceState.addLog(context.getString(R.string.error_kernel_install_failed, e.message ?: ""))
+            context.getString(R.string.error_format_short, e.message ?: "")
         }
     }
 
     fun clearCustomKernel() {
         File(context.filesDir, "custom_vkturn").delete()
         _customKernelExists.value = false
-        ProxyServiceState.addLog("Кастомное ядро удалено, используется встроенное")
+        ProxyServiceState.addLog(context.getString(R.string.log_custom_kernel_deleted))
     }
 
     fun clearState() {

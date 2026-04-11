@@ -76,8 +76,8 @@ class ProxyService : Service() {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
         }
         val notification = NotificationCompat.Builder(this, "ProxyChannel")
-            .setContentTitle("VK TURN Proxy")
-            .setContentText("Подключение...")
+            .setContentTitle(getString(R.string.notification_title))
+            .setContentText(getString(R.string.proxy_connecting))
             .setSmallIcon(android.R.drawable.ic_menu_preferences)
             .setOngoing(true)
             .setContentIntent(openAppIntent)
@@ -94,7 +94,7 @@ class ProxyService : Service() {
 
         registerNetworkCallback()
 
-        ProxyServiceState.addLog("=== ЗАПУСК ПРОКСИ ===")
+        ProxyServiceState.addLog(getString(R.string.log_proxy_start))
         serviceScope.launch { startBinaryProcess() }
 
         return START_STICKY
@@ -108,10 +108,10 @@ class ProxyService : Service() {
         val customBin = File(filesDir, "custom_vkturn")
         val useCustom = customBin.exists()
         val executable = if (useCustom) {
-            ProxyServiceState.addLog("Используется кастомное ядро из памяти телефона")
+            ProxyServiceState.addLog(getString(R.string.log_custom_kernel))
             customBin.absolutePath
         } else {
-            ProxyServiceState.addLog("Используется стандартное ядро из APK")
+            ProxyServiceState.addLog(getString(R.string.log_standard_kernel))
             "${applicationInfo.nativeLibraryDir}/libvkturn.so"
         }
 
@@ -162,7 +162,7 @@ class ProxyService : Service() {
         var captchaActive = false
         var captchaSessionCounter = 0L
         try {
-            ProxyServiceState.addLog("Команда: ${cmdArgs.joinToString(" ")}")
+            ProxyServiceState.addLog(getString(R.string.log_command, cmdArgs.joinToString(" ")))
 
             val proc = withContext(Dispatchers.IO) {
                 ProcessBuilder(cmdArgs)
@@ -217,18 +217,18 @@ class ProxyService : Service() {
                         if (lower.contains("panic") || lower.contains("fatal") ||
                             lower.contains("rate limit")) {
                             ProxyServiceState.setStartupResult(StartupResult.Failed(l))
-                            updateNotification("VK TURN Proxy", "Ошибка подключения")
+                            updateNotification(getString(R.string.notification_title), getString(R.string.error_connecting))
                             startupFailed = true
                         } else {
                             ProxyServiceState.setStartupResult(StartupResult.Success)
-                            updateNotification("VK TURN Proxy", "Прокси активен")
+                            updateNotification(getString(R.string.notification_title), getString(R.string.proxy_active))
                         }
                         startupEmitted = true
                     }
 
                     // compareAndSet гарантирует единственный postDelayed даже при параллельных quota-ошибках
                     if (isQuotaError(l) && sessionKillScheduled.compareAndSet(false, true)) {
-                        ProxyServiceState.addLog(">>> QUOTA ERROR — сброс сессии через 2с")
+                        ProxyServiceState.addLog(getString(R.string.log_quota_error))
                         handler.postDelayed({
                             sessionKillScheduled.set(false)
                             if (!userStopped.get()) {
@@ -243,10 +243,10 @@ class ProxyService : Service() {
             exitCode = if (withContext(Dispatchers.IO) {
                     proc.waitFor(5, TimeUnit.MINUTES)
                 }) proc.exitValue() else -1
-            ProxyServiceState.addLog("=== ПРОЦЕСС ОСТАНОВЛЕН (Код: $exitCode) ===")
+            ProxyServiceState.addLog(getString(R.string.log_process_stopped, exitCode))
             if (!startupEmitted) {
                 ProxyServiceState.setStartupResult(StartupResult.Failed(
-                    "Процесс завершился без вывода (код: $exitCode)"))
+                    getString(R.string.error_process_no_output, exitCode)))
             }
 
         } catch (e: InterruptedIOException) {
@@ -254,11 +254,11 @@ class ProxyService : Service() {
         } catch (e: Exception) {
             val msg = e.message ?: ""
             if (msg.contains("error=13") || msg.contains("Permission denied")) {
-                ProxyServiceState.addLog("КРИТИЧЕСКАЯ ОШИБКА: Отказано в запуске ядра — ваше устройство блокирует выполнение файлов из внутреннего хранилища (SELinux/noexec). Используйте встроенное ядро.")
+                ProxyServiceState.addLog(getString(R.string.error_kernel_permission_denied))
                 ProxyServiceState.setStartupResult(StartupResult.Failed(msg))
                 startupFailed = true
             } else {
-                ProxyServiceState.addLog("КРИТИЧЕСКАЯ ОШИБКА: ${e.message}")
+                ProxyServiceState.addLog(getString(R.string.error_critical_format, e.message))
             }
         } finally {
             ProxyServiceState.setCaptchaSession(null)
@@ -269,7 +269,7 @@ class ProxyService : Service() {
                     stopSelf()
                 }
                 startupFailed -> {
-                    ProxyServiceState.addLog("=== Ошибка при запуске, watchdog не активирован ===")
+                    ProxyServiceState.addLog(getString(R.string.log_startup_failed_no_watchdog))
                     ProxyServiceState.setRunning(false)
                     // Убираем proxyFailed.tryEmit, так как startProxy и так обработает StartupResult.Failed
                     stopSelf()
@@ -277,9 +277,9 @@ class ProxyService : Service() {
                 exitCode == 0 -> {
                     val uptime = System.currentTimeMillis() - startedAt
                     if (uptime < 5_000L) {
-                        ProxyServiceState.addLog("=== Быстрый выход (${uptime}мс) — проверьте VK-ссылку и настройки ===")
+                        ProxyServiceState.addLog(getString(R.string.log_quick_exit, uptime))
                     } else {
-                        ProxyServiceState.addLog("=== Сессия завершена нормально ===")
+                        ProxyServiceState.addLog(getString(R.string.log_session_finished))
                     }
                     ProxyServiceState.setRunning(false)
                     stopSelf()
@@ -294,7 +294,7 @@ class ProxyService : Service() {
     private fun scheduleWatchdogRestart() {
         restartCount++
         if (restartCount > MAX_RESTARTS) {
-            ProxyServiceState.addLog("=== WATCHDOG: превышен лимит попыток ($MAX_RESTARTS), остановка ===")
+            ProxyServiceState.addLog(getString(R.string.log_watchdog_limit, MAX_RESTARTS))
             ProxyServiceState.setRunning(false)
             ProxyServiceState.emitFailed()
             stopSelf()
@@ -304,8 +304,8 @@ class ProxyService : Service() {
         val baseDelay = minOf(1_000L * restartCount, 30_000L)
         val jitter = Random.nextLong(0, 500)
         val delay = baseDelay + jitter
-        ProxyServiceState.addLog("=== WATCHDOG: перезапуск через ${delay}мс (попытка $restartCount/$MAX_RESTARTS) ===")
-        updateNotification("VK TURN Proxy", "Переподключение ($restartCount/$MAX_RESTARTS)...")
+        ProxyServiceState.addLog(getString(R.string.log_watchdog_restart, delay, restartCount, MAX_RESTARTS))
+        updateNotification(getString(R.string.notification_title), getString(R.string.notification_reconnecting, restartCount, MAX_RESTARTS))
         handler.postDelayed({
             if (!userStopped.get()) serviceScope.launch { startBinaryProcess() }
         }, delay)
@@ -330,8 +330,8 @@ class ProxyService : Service() {
                 networkDebounceJob = serviceScope.launch {
                     kotlinx.coroutines.delay(2000)
                     if (!userStopped.get() && process.get() != null) {
-                        ProxyServiceState.addLog("=== СМЕНА СЕТИ — ПЕРЕЗАПУСК ===")
-                        updateNotification("VK TURN Proxy", "Смена сети, переподключение...")
+                        ProxyServiceState.addLog(getString(R.string.log_network_change))
+                        updateNotification(getString(R.string.notification_title), getString(R.string.notification_network_change))
                         restartCount = 0
                         val p = process.get()
                         p?.destroyForcibly()
@@ -380,7 +380,7 @@ class ProxyService : Service() {
         ProxyServiceState.setRunning(false)
         handler.removeCallbacksAndMessages(null)
         unregisterNetworkCallback()
-        ProxyServiceState.addLog("=== ОСТАНОВКА ИЗ ИНТЕРФЕЙСА ===")
+        ProxyServiceState.addLog(getString(R.string.log_stop_ui))
         process.get()?.destroyForcibly()
         serviceScope.cancel()
         if (wakeLock?.isHeld == true) wakeLock?.release()

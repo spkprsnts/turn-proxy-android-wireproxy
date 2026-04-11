@@ -19,19 +19,17 @@
     <string name="proxy_active_stop">Прокси активен — нажмите для остановки</string>
     <string name="proxy_error_restart">Ошибка — нажмите для повторного запуска</string>
     <string name="proxy_captcha_required">Требуется прохождение капчи</string>
+    <string name="captcha_title">Проверка VK</string>
+    <string name="captcha_desc">Пройдите проверку для продолжения</string>
     <string name="start_proxy">Запустить прокси</string>
     <string name="wireproxy_idle">Остановлен</string>
     <string name="wireproxy_starting_state">Запускается</string>
     <string name="wireproxy_running_state">Запущен</string>
-    <string name="connection">Соединение</string>
-    <string name="not_connected">Не сопряжено</string>
-    <string name="connected_format">Сопряжено: %1$s</string>
     <string name="error_format_short">Ошибка: %1$s</string>
-    <string name="change">Изменить</string>
-    <string name="configure">Настроить</string>
     <string name="android_client">Android-клиент</string>
     <string name="proxy_core">Прокси-ядро</string>
     <string name="btn_open">Открыть</string>
+    <string name="btn_close">Закрыть</string>
     <string name="reset_settings">Сбросить настройки</string>
     <string name="reset">Сбросить</string>
     <string name="reset_all_settings_title">Сбросить все настройки?</string>
@@ -46,7 +44,6 @@
     <string name="wireproxy_import_clipboard">Из буфера</string>
     <string name="wireproxy_import_success">Конфигурация импортирована</string>
     <string name="wireproxy_import_error">Ошибка импорта</string>
-    <string name="wireproxy_save_success">Сохранено в wg.conf</string>
     <string name="wireproxy_proxy_addresses">Адреса прокси</string>
     <string name="wireproxy_http">HTTP</string>
     <string name="wireproxy_http_placeholder">127.0.0.1:8080</string>
@@ -85,12 +82,15 @@
     <string name="connection_title">Подключение</string>
     <string name="raw_mode">Raw Mode</string>
     <string name="raw_mode_desc">Ввод аргументов вручную</string>
+    <string name="raw_label">Raw</string>
     <string name="server_address_label">Адрес vk-turn-proxy сервера</string>
     <string name="server_address_placeholder">1.2.3.4:56000</string>
     <string name="server_address_support">IP и порт vk-turn-proxy на вашем VPS</string>
     <string name="vk_link_label">Ссылка VK-звонок/YA-телемост</string>
     <string name="vk_link_placeholder">https://vk.com/call/…</string>
     <string name="vk_link_support">VK: Звонки → Создать → Скопировать ссылку (не нажимайте «Завершить»)</string>
+    <string name="telemost_dc_label">Telemost DC</string>
+    <string name="telemost_dc_desc">Использовать Datachannel для передачи данных в Telemost</string>
     <string name="local_listen_address">Локальный адрес прослушивания</string>
     <string name="local_listen_placeholder">127.0.0.1:9000</string>
     <string name="local_listen_support">Адрес, на котором клиент принимает трафик от WireGuard/Hysteria</string>
@@ -107,8 +107,6 @@
     <string name="manual_captcha_desc">Решать капчу вручную вместо автоматического распознавания</string>
     <string name="force_turn_port_443">TURN-порт 443</string>
     <string name="force_turn_port_443_desc">Использовать порт 443 вместо стандартного.\nПомогает в сетях, где порт 19302 заблокирован</string>
-    <string name="wireproxy_enabled">Включить Wireproxy</string>
-    <string name="wireproxy_enabled_desc">Запускать Wireproxy вместе с основным прокси</string>
     <string name="core_title">Ядро</string>
     <string name="custom_core">Кастомное ядро</string>
     <string name="builtin_core">Встроенное ядро</string>
@@ -155,7 +153,49 @@
     <string name="privacy_mode_title">Приватный режим</string>
     <string name="privacy_mode_desc">Скрывает IP и порты</string>
 
-    <string name="ping_label">Пинг Wireproxy</string>
     <string name="ping_error">Ошибка</string>
     <string name="ping_ms">%1$d мс</string>
+
+    <!-- Errors and Logs -->
+    <string name="error_proxy_crashed">Прокси упал %1$d раз — проверьте настройки</string>
+    <string name="error_settings_empty">Не заполнены настройки клиента</string>
+    <string name="error_raw_empty">Не задана raw-команда</string>
+    <string name="error_proxy_not_started">Прокси не запустился</string>
+    <string name="error_file_open">Не удалось открыть файл</string>
+    <string name="error_not_elf">Файл не является ELF-бинарником. Убедитесь, что загружаете правильное ядро</string>
+    <string name="error_file_empty">Файл пустой</string>
+    <string name="error_file_too_large">Файл слишком большой (максимум %1$d МБ)</string>
+    <string name="log_custom_kernel_installed">Кастомное ядро установлено: %1$d КБ</string>
+    <string name="error_kernel_install_failed">Ошибка установки ядра: %1$s</string>
+    <string name="log_custom_kernel_deleted">Кастомное ядро удалено, используется встроенное</string>
+    <string name="error_update_url_not_found">URL обновления не найден</string>
+    <string name="error_update_file_not_found">Файл обновления не найден</string>
+    <string name="error_no_connection">Нет соединения с сервером</string>
+    <string name="error_apk_not_found">APK не найден в релизе</string>
+    <string name="error_download_failed">Ошибка загрузки: %1$s</string>
+    <string name="log_standard_kernel">Используется стандартное ядро из APK</string>
+    <string name="log_custom_kernel">Используется кастомное ядро из памяти телефона</string>
+    <string name="log_command">Команда: %1$s</string>
+    <string name="log_quota_error">>>> QUOTA ERROR — сброс сессии через 2с</string>
+    <string name="log_proxy_start">=== ЗАПУСК ПРОКСИ ===</string>
+    <string name="log_process_stopped">=== ПРОЦЕСС ОСТАНОВЛЕН (Код: %1$d) ===</string>
+    <string name="log_startup_failed_no_watchdog">=== Ошибка при запуске, watchdog не активирован ===</string>
+    <string name="log_quick_exit">=== Быстрый выход (%1$dмс) — проверьте VK-ссылку и настройки ===</string>
+    <string name="log_session_finished">=== Сессия завершена нормально ===</string>
+    <string name="log_watchdog_limit">=== WATCHDOG: превышен лимит попыток (%1$d), остановка ===</string>
+    <string name="log_watchdog_restart">=== WATCHDOG: перезапуск через %1$dмс (попытка %2$d/%3$d) ===</string>
+    <string name="log_network_change">=== СМЕНА СЕТИ — ПЕРЕЗАПУСК ===</string>
+    <string name="log_stop_ui">=== ОСТАНОВКА ИЗ ИНТЕРФЕЙСА ===</string>
+
+    <string name="error_release_info_failed">Не удалось получить информацию о релизе</string>
+    <string name="error_process_no_output">Процесс завершился без вывода (код: %1$d)</string>
+    <string name="error_kernel_permission_denied">КРИТИЧЕСКАЯ ОШИБКА: Отказано в запуске ядра — ваше устройство блокирует выполнение файлов из внутреннего хранилища (SELinux/noexec). Используйте встроенное ядро.</string>
+    <string name="error_critical_format">КРИТИЧЕСКАЯ ОШИБКА: %1$s</string>
+    <string name="error_connecting">Ошибка подключения</string>
+
+    <string name="notification_title">VK TURN Proxy</string>
+    <string name="notification_reconnecting">Переподключение (%1$d/%2$d)...</string>
+    <string name="notification_network_change">Смена сети, переподключение…</string>
+    <string name="error_with_details">%1$s: %2$s</string>
+    <string name="redacted_value">••••••</string>
 </resources>
