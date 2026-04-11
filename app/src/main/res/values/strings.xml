@@ -76,6 +76,8 @@
     <string name="wireproxy_persistent_keepalive_placeholder">25</string>
     <string name="wireproxy_http_copied">HTTP прокси скопирован</string>
     <string name="wireproxy_socks5_copied">SOCKS5 прокси скопирован</string>
+    <string name="wireproxy_mtu_recommendation">Рекомендуемое значение — 1280</string>
+    <string name="wireproxy_raw_config">Raw wg.conf</string>
 
 
     <!-- ClientSetupScreen -->

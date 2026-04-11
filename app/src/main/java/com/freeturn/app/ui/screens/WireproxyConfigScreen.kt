@@ -199,6 +199,17 @@ fun WireproxyConfigScreen(
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(mtu = it)) },
                 label = { Text(stringResource(R.string.wireproxy_mtu)) },
                 placeholder = { Text(stringResource(R.string.wireproxy_mtu_placeholder)) },
+                supportingText = {
+                    if (wgConfig.mtu != "1280") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp)
+                        ) {
+                            Text(stringResource(R.string.wireproxy_mtu_recommendation))
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
@@ -266,7 +277,7 @@ fun WireproxyConfigScreen(
 
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
-            Text("Raw wg.conf", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.wireproxy_raw_config), style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
                 value = wgConfigText,
