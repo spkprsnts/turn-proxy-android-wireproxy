@@ -125,8 +125,14 @@ class ProxyService : Service() {
             cmdArgs.add(executable)
             cmdArgs.add("-peer"); cmdArgs.add(cfg.serverAddress)
 
-            cmdArgs.add(if (cfg.vkLink.contains("yandex")) "-yandex-link" else "-vk-link")
-            cmdArgs.add(cfg.vkLink)
+            if (cfg.vkLink.contains("yandex")) {
+                cmdArgs.add("-yandex-link")
+                cmdArgs.add(cfg.vkLink)
+                if (cfg.telemostDc) cmdArgs.add("-telemost-dc")
+            } else {
+                cmdArgs.add("-vk-link")
+                cmdArgs.add(cfg.vkLink)
+            }
             cmdArgs.add("-listen"); cmdArgs.add(cfg.localPort)
             if (cfg.threads > 0) { cmdArgs.add("-n"); cmdArgs.add(cfg.threads.toString()) }
             if (cfg.vlessMode) cmdArgs.add("-vless")
@@ -171,7 +177,7 @@ class ProxyService : Service() {
                     val l = line ?: continue
                     ProxyServiceState.addLog(l)
 
-                    if (!useCustom && l.contains("] Established ") && !l.contains("Wireproxy:")) {
+                    if (!useCustom && (l.contains("Established") || l.contains("listening on")) && !l.contains("[Wireproxy]")) {
                         ProxyServiceState.setWorking(true)
                     }
 

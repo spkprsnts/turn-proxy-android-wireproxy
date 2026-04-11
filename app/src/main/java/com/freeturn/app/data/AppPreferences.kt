@@ -29,6 +29,7 @@ data class ClientConfig(
     val isRawMode: Boolean = false,
     val rawCommand: String = "",
     val vlessMode: Boolean = false,
+    val telemostDc: Boolean = true,
     val forceTurnPort443: Boolean = false,
     val wireproxyEnabled: Boolean = false
 )
@@ -54,6 +55,7 @@ class AppPreferences(context: Context) {
         val CLIENT_IS_RAW = booleanPreferencesKey("client_is_raw")
         val CLIENT_RAW_CMD = stringPreferencesKey("client_raw_cmd")
         val CLIENT_VLESS = booleanPreferencesKey("client_vless")
+        val CLIENT_TELEMOST_DC = booleanPreferencesKey("client_telemost_dc")
         val CLIENT_FORCE_PORT_443 = booleanPreferencesKey("client_force_port_443")
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -90,6 +92,7 @@ class AppPreferences(context: Context) {
                 isRawMode = prefs[CLIENT_IS_RAW] ?: false,
                 rawCommand = prefs[CLIENT_RAW_CMD] ?: "",
                 vlessMode = prefs[CLIENT_VLESS] ?: false,
+                telemostDc = prefs[CLIENT_TELEMOST_DC] ?: true,
                 forceTurnPort443 = prefs[CLIENT_FORCE_PORT_443] ?: false,
                 wireproxyEnabled = prefs[WIREPROXY_ENABLED] ?: false
             )
@@ -121,6 +124,7 @@ class AppPreferences(context: Context) {
             prefs[CLIENT_IS_RAW] = config.isRawMode
             prefs[CLIENT_RAW_CMD] = config.rawCommand
             prefs[CLIENT_VLESS] = config.vlessMode
+            prefs[CLIENT_TELEMOST_DC] = config.telemostDc
             prefs[CLIENT_FORCE_PORT_443] = config.forceTurnPort443
             prefs[WIREPROXY_ENABLED] = config.wireproxyEnabled
         }

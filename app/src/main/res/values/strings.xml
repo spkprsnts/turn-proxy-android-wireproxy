@@ -88,7 +88,7 @@
     <string name="server_address_label">Адрес vk-turn-proxy сервера</string>
     <string name="server_address_placeholder">1.2.3.4:56000</string>
     <string name="server_address_support">IP и порт vk-turn-proxy на вашем VPS</string>
-    <string name="vk_link_label">Ссылка VK-звонок/Ya-телемост</string>
+    <string name="vk_link_label">Ссылка VK-звонок/YA-телемост</string>
     <string name="vk_link_placeholder">https://vk.com/call/…</string>
     <string name="vk_link_support">VK: Звонки → Создать → Скопировать ссылку (не нажимайте «Завершить»)</string>
     <string name="local_listen_address">Локальный адрес прослушивания</string>

@@ -4,6 +4,11 @@ package com.freeturn.app.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -92,6 +97,7 @@ fun ClientSetupScreen(
     var manualCaptcha by rememberSaveable(saved.manualCaptcha) { mutableStateOf(saved.manualCaptcha) }
     var localPort    by rememberSaveable(saved.localPort)      { mutableStateOf(saved.localPort) }
     var vlessMode    by rememberSaveable(saved.vlessMode)      { mutableStateOf(saved.vlessMode) }
+    var telemostDc by rememberSaveable(saved.telemostDc) { mutableStateOf(saved.telemostDc) }
     var forcePort443 by rememberSaveable(saved.forceTurnPort443) { mutableStateOf(saved.forceTurnPort443) }
     var lastSliderInt by rememberSaveable { mutableIntStateOf(saved.threads) }
 
@@ -104,7 +110,7 @@ fun ClientSetupScreen(
 
     // Авто-сохранение с дебаунсом 600 мс на каждое изменение поля.
     // vlessMode исключён — сохраняется через setVlessMode с автоперезапуском сервера.
-    LaunchedEffect(isRawMode, rawCommand, serverAddress, vkLink, threads, useUdp, noDtls, manualCaptcha, localPort, vlessMode, forcePort443) {
+    LaunchedEffect(isRawMode, rawCommand, serverAddress, vkLink, threads, useUdp, noDtls, manualCaptcha, localPort, vlessMode, telemostDc, forcePort443) {
         delay(600)
         viewModel.saveClientConfig(
             ClientConfig(
@@ -118,6 +124,7 @@ fun ClientSetupScreen(
                 manualCaptcha    = manualCaptcha,
                 localPort        = localPort.trim(),
                 vlessMode        = vlessMode,
+                telemostDc       = telemostDc,
                 forceTurnPort443 = forcePort443,
                 wireproxyEnabled = saved.wireproxyEnabled
             )
@@ -177,6 +184,25 @@ fun ClientSetupScreen(
                     readOnly = privacyMode,
                     supportingText = { Text(stringResource(R.string.vk_link_support)) }
                 )
+
+                AnimatedVisibility(
+                    visible = vkLink.contains("telemost.yandex.ru/j/"),
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    SwitchRow(
+                        label = "Telemost DC",
+                        description = "Иcпользовать Datachannel для передачи данных в Telemost",
+                        checked = telemostDc,
+                        onCheckedChange = {
+                            HapticUtil.perform(
+                                context,
+                                if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF
+                            )
+                            telemostDc = it
+                        }
+                    )
+                }
 
                 OutlinedTextField(
                     value = localPort.redact(privacyMode),
