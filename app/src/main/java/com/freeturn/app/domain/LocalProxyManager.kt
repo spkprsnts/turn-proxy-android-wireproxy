@@ -52,24 +52,42 @@ class LocalProxyManager(private val context: Context) {
                 _proxyState.value = ProxyState.CaptchaRequired(session.url, session.sessionId)
             } else if (_proxyState.value is ProxyState.CaptchaRequired) {
                 // Капча-сессия закрыта — возвращаемся в Running (ядро продолжает работу)
-                _proxyState.value = ProxyState.Running
+                updateStateAfterSuccess()
             }
         }
     }
 
     suspend fun observeProxyServiceStatus() {
         ProxyServiceState.isRunning.collect { running ->
-            if (running && _proxyState.value !is ProxyState.Running && _proxyState.value !is ProxyState.Starting) {
+            if (running && _proxyState.value !is ProxyState.Running && _proxyState.value !is ProxyState.Starting && _proxyState.value !is ProxyState.Working) {
                 // Сервис запущен внешним источником (например, ProxyReceiver)
-                _proxyState.value = ProxyState.Running
-            } else if (!running && _proxyState.value is ProxyState.Running) {
+                updateStateAfterSuccess()
+            } else if (!running && (_proxyState.value is ProxyState.Running || _proxyState.value is ProxyState.Working)) {
+                context.stopService(Intent(context, WireproxyService::class.java))
                 _proxyState.value = ProxyState.Idle
             }
         }
     }
 
+    suspend fun observeProxyServiceWorking() {
+        ProxyServiceState.isWorking.collect { working ->
+            _proxyState.value = when {
+                working -> ProxyState.Working
+                _proxyState.value is ProxyState.Working && !_customKernelExists.value -> ProxyState.Running else -> _proxyState.value // Оставляем текущее состояние без изменений
+            }
+        }
+    }
+
+    private fun updateStateAfterSuccess() {
+        if (_customKernelExists.value) {
+            _proxyState.value = ProxyState.Working
+        } else {
+            _proxyState.value = ProxyState.Running
+        }
+    }
+
     fun syncInitialState() {
-        if (ProxyServiceState.isRunning.value) _proxyState.value = ProxyState.Running
+        if (ProxyServiceState.isRunning.value) updateStateAfterSuccess()
     }
 
     suspend fun startProxy(cfg: ClientConfig) {
@@ -109,12 +127,17 @@ class LocalProxyManager(private val context: Context) {
         if (_proxyState.value is ProxyState.Error) return
 
         when (result) {
-            null -> setErrorWithAutoReset("Прокси не запустился")
+            null -> {
+                stopProxy()
+                setErrorWithAutoReset("Прокси не запустился")
+            }
             is StartupResult.Failed -> {
                 stopProxy()
                 setErrorWithAutoReset(result.message)
             }
-            is StartupResult.Success -> _proxyState.value = ProxyState.Running
+            is StartupResult.Success -> {
+                updateStateAfterSuccess()
+            }
         }
     }
 
@@ -127,7 +150,7 @@ class LocalProxyManager(private val context: Context) {
     fun dismissCaptcha() {
         ProxyServiceState.setCaptchaSession(null)
         if (_proxyState.value is ProxyState.CaptchaRequired) {
-            _proxyState.value = ProxyState.Running
+            updateStateAfterSuccess()
         }
     }
 

@@ -64,6 +64,8 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -76,10 +78,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -90,6 +95,9 @@ import com.freeturn.app.viewmodel.MainViewModel
 import com.freeturn.app.viewmodel.ProxyState
 import com.freeturn.app.viewmodel.UpdateState
 import androidx.core.net.toUri
+import com.freeturn.app.ui.theme.StatusBlue
+import com.freeturn.app.ui.theme.StatusOrange
+import com.freeturn.app.ui.theme.StatusOrangeDark
 
 @SuppressLint("BatteryLife")
 @Composable
@@ -99,6 +107,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val proxyState by viewModel.proxyState.collectAsStateWithLifecycle()
     val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
+    val customKernelExists by viewModel.customKernelExists.collectAsStateWithLifecycle()
     val isConfigured = clientConfig.serverAddress.isNotBlank() || (clientConfig.isRawMode && clientConfig.rawCommand.isNotBlank())
 
     // Запрос разрешений при первом открытии главного экрана
@@ -181,7 +190,7 @@ fun HomeScreen(
                             HapticUtil.perform(context, HapticUtil.Pattern.TOGGLE_ON)
                             viewModel.startProxy()
                         }
-                        is ProxyState.Running -> {
+                        is ProxyState.Running, is ProxyState.Working, is ProxyState.CaptchaRequired -> {
                             HapticUtil.perform(context, HapticUtil.Pattern.TOGGLE_OFF)
                             viewModel.stopProxy()
                         }
@@ -190,28 +199,72 @@ fun HomeScreen(
                 }
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
             Text(
                 text = when (proxyState) {
-                    is ProxyState.Running -> stringResource(R.string.proxy_active)
-                    is ProxyState.Starting -> stringResource(R.string.proxy_connecting)
+                    is ProxyState.Working -> stringResource(if (customKernelExists) R.string.proxy_running else R.string.proxy_active)
+                    is ProxyState.Starting -> stringResource(R.string.proxy_starting)
+                    is ProxyState.Running -> stringResource(R.string.proxy_connecting)
                     is ProxyState.Error -> (proxyState as ProxyState.Error).message
                     is ProxyState.CaptchaRequired -> "Требуется прохождение капчи"
                     else -> stringResource(R.string.proxy_press_to_start)
                 },
                 style = MaterialTheme.typography.titleMedium,
                 color = when (proxyState) {
-                    is ProxyState.Running -> StatusGreen
+                    is ProxyState.Working -> StatusGreen
+                    is ProxyState.Running, is ProxyState.CaptchaRequired -> StatusOrange
                     is ProxyState.Error -> MaterialTheme.colorScheme.error
-                    is ProxyState.CaptchaRequired -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
                 },
                 textAlign = TextAlign.Center
             )
 
+            Spacer(Modifier.height(21.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = StatusGreenDark.copy(alpha = 0.15f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            R.drawable.check_circle_24px
+                        ),
+                        contentDescription = null,
+                        tint = StatusGreen,
+                        modifier = Modifier.size(36.dp)
+                    )
+
+                    Column(modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center) {
+                        Text(
+                            text = "WireProxy",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Активен",
+                            color = StatusGreen,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Switch(checked = true, onCheckedChange = { }, enabled = true)
+                }
+            }
+
             if (isConfigured) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(21.dp))
 
                 Card(
                     modifier = Modifier
@@ -226,7 +279,8 @@ fun HomeScreen(
                             Text(
                                 stringResource(R.string.raw_mode),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                fontWeight = FontWeight.Medium
                             )
                             Spacer(Modifier.height(4.dp))
 
@@ -396,7 +450,8 @@ private fun UpdateDialogs(viewModel: MainViewModel) {
 private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
     val containerColor by animateColorAsState(
         targetValue = when (state) {
-            is ProxyState.Running -> StatusGreenDark
+            is ProxyState.Working -> StatusGreenDark
+            is ProxyState.Running, is ProxyState.CaptchaRequired -> StatusOrangeDark
             is ProxyState.Error -> MaterialTheme.colorScheme.errorContainer
             is ProxyState.Starting -> MaterialTheme.colorScheme.secondaryContainer
             else -> MaterialTheme.colorScheme.primaryContainer
@@ -406,7 +461,8 @@ private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
     )
     val contentColor by animateColorAsState(
         targetValue = when (state) {
-            is ProxyState.Running -> StatusGreen
+            is ProxyState.Working -> StatusGreen
+            is ProxyState.Running, is ProxyState.CaptchaRequired -> StatusOrange
             is ProxyState.Error -> MaterialTheme.colorScheme.onErrorContainer
             is ProxyState.Starting -> MaterialTheme.colorScheme.onSecondaryContainer
             else -> MaterialTheme.colorScheme.onPrimaryContainer
@@ -415,9 +471,23 @@ private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
         label = "btn_fg"
     )
     val scale by animateFloatAsState(
-        targetValue = if (state is ProxyState.Starting) 0.96f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        targetValue = when (state) {
+            is ProxyState.Starting -> 0.94f
+            is ProxyState.Running, is ProxyState.CaptchaRequired -> 0.96f
+            is ProxyState.Idle, is ProxyState.CaptchaRequired -> 0.98f
+            else -> 1f
+        },
+        animationSpec = spring(
+            dampingRatio = 0.3f, // Значения меньше 0.5 дают очень сильный резонанс
+            stiffness = Spring.StiffnessLow
+        ),
         label = "btn_scale"
+    )
+
+    // Вычисляем размер тени отдельно для анимации (опционально)
+    val elevation by animateDpAsState(
+        targetValue = if (state is ProxyState.Working) 16.dp else 6.dp,
+        label = "elevation"
     )
 
     Surface(
@@ -425,10 +495,17 @@ private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
         modifier = Modifier
             .size(148.dp)
             .scale(scale)
+            // Использование .shadow перед .clip дает более выраженный эффект
+            .shadow(
+                elevation = elevation,
+                shape = CircleShape,
+                ambientColor = Color.Black.copy(alpha = 0.8f), // Тень вокруг
+                spotColor = Color.Black // Направленная тень
+            )
             .clip(CircleShape),
         shape = CircleShape,
         color = containerColor,
-        shadowElevation = if (state is ProxyState.Running) 12.dp else 4.dp
+        shadowElevation = 0.dp // if (state is ProxyState.Working) 12.dp else 4.dp
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -436,18 +513,18 @@ private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
             verticalArrangement = Arrangement.Center
         ) {
             when (state) {
-                is ProxyState.Starting -> CircularWavyProgressIndicator(color = contentColor)
-                is ProxyState.Running -> Icon(
+                is ProxyState.Starting, is ProxyState.Running, is ProxyState.CaptchaRequired -> CircularWavyProgressIndicator(color = contentColor, trackColor = containerColor)
+                is ProxyState.Working -> Icon(
                     painterResource(R.drawable.check_circle_24px), stringResource(R.string.proxy_active_stop),
-                    Modifier.size(52.dp), tint = contentColor
+                    Modifier.size(66.dp), tint = contentColor
                 )
                 is ProxyState.Error -> Icon(
                     painterResource(R.drawable.error_24px), stringResource(R.string.proxy_error_restart),
-                    Modifier.size(52.dp), tint = contentColor
+                    Modifier.size(66.dp), tint = contentColor
                 )
                 else -> Icon(
                     painterResource(R.drawable.play_arrow_24px), stringResource(R.string.start_proxy),
-                    Modifier.size(52.dp), tint = contentColor
+                    Modifier.size(66.dp), tint = contentColor
                 )
             }
         }
@@ -550,7 +627,7 @@ private fun InfoBottomSheet(
                 supportingContent = { Text(stringResource(R.string.dynamic_theme_desc)) },
                 colors = listColors,
                 trailingContent = {
-                    androidx.compose.material3.Switch(
+                    Switch(
                         checked = dynamicTheme,
                         onCheckedChange = { viewModel.setDynamicTheme(it) }
                     )
@@ -566,7 +643,7 @@ private fun InfoBottomSheet(
                 supportingContent = { Text(stringResource(R.string.privacy_mode_desc)) },
                 colors = listColors,
                 trailingContent = {
-                    androidx.compose.material3.Switch(
+                    Switch(
                         checked = privacyMode,
                         onCheckedChange = onPrivacyModeChange
                     )

@@ -5,6 +5,7 @@ sealed class ProxyState {
     object Idle : ProxyState()
     object Starting : ProxyState()
     object Running : ProxyState()
+    object Working : ProxyState()
     data class Error(val message: String) : ProxyState()
     data class CaptchaRequired(val url: String, val sessionId: Long = 0L) : ProxyState()
 }

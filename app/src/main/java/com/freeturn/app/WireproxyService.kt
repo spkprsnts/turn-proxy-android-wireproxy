@@ -12,6 +12,7 @@ import kotlinx.coroutines.*
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
+import java.io.InterruptedIOException
 import java.util.concurrent.atomic.AtomicReference
 
 class WireproxyService : Service() {
@@ -86,6 +87,8 @@ class WireproxyService : Service() {
             withContext(Dispatchers.IO) {
                 proc.waitFor()
             }
+        } catch (e: InterruptedIOException) {
+            // pass
         } catch (e: Exception) {
             ProxyServiceState.addLog("Wireproxy Error: ${e.message}")
         } finally {

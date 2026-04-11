@@ -125,26 +125,13 @@ fun WireproxyConfigScreen(
 
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
-            Text("Raw wg.conf", style = MaterialTheme.typography.titleMedium)
-
-            OutlinedTextField(
-                value = wgConfigText,
-                onValueChange = { viewModel.updateWgConfigText(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 120.dp, max = 300.dp),
-                placeholder = { Text("[Interface]\nPrivateKey = ...\n\n[Peer]\nPublicKey = ...") },
-                textStyle = MaterialTheme.typography.bodySmall
-            )
-
-            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
-
             Text(stringResource(R.string.wireproxy_proxy_addresses), style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
                 value = wgConfig.httpBindAddress,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(httpBindAddress = it)) },
                 label = { Text(stringResource(R.string.wireproxy_http)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_http_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -152,6 +139,7 @@ fun WireproxyConfigScreen(
                 value = wgConfig.socks5BindAddress,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(socks5BindAddress = it)) },
                 label = { Text(stringResource(R.string.wireproxy_socks5)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_socks5_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -159,12 +147,13 @@ fun WireproxyConfigScreen(
 
             Text(stringResource(R.string.wireproxy_edit_config), style = MaterialTheme.typography.titleMedium)
 
-            Text(stringResource(R.string.wireproxy_interface), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.wireproxy_interface), style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
                 value = wgConfig.privateKey,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(privateKey = it)) },
                 label = { Text(stringResource(R.string.wireproxy_private_key)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_private_key_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = privacyMode
             )
@@ -173,6 +162,7 @@ fun WireproxyConfigScreen(
                 value = wgConfig.address,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(address = it)) },
                 label = { Text(stringResource(R.string.wireproxy_address)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_address_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = privacyMode
             )
@@ -181,6 +171,7 @@ fun WireproxyConfigScreen(
                 value = wgConfig.dns,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(dns = it)) },
                 label = { Text(stringResource(R.string.wireproxy_dns)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_dns_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -188,16 +179,19 @@ fun WireproxyConfigScreen(
                 value = wgConfig.mtu,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(mtu = it)) },
                 label = { Text(stringResource(R.string.wireproxy_mtu)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_mtu_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
-            Text(stringResource(R.string.wireproxy_peer), style = MaterialTheme.typography.titleSmall)
+            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+            Text(stringResource(R.string.wireproxy_peer), style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
                 value = wgConfig.publicKey,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(publicKey = it)) },
                 label = { Text(stringResource(R.string.wireproxy_public_key)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_public_key_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = privacyMode
             )
@@ -206,6 +200,7 @@ fun WireproxyConfigScreen(
                 value = wgConfig.endpoint,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(endpoint = it)) },
                 label = { Text(stringResource(R.string.wireproxy_endpoint)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_endpoint_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -213,6 +208,7 @@ fun WireproxyConfigScreen(
                 value = wgConfig.allowedIps,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(allowedIps = it)) },
                 label = { Text(stringResource(R.string.wireproxy_allowed_ips)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_allowed_ips_placeholder)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -220,8 +216,23 @@ fun WireproxyConfigScreen(
                 value = wgConfig.persistentKeepalive,
                 onValueChange = { viewModel.updateWgConfig(wgConfig.copy(persistentKeepalive = it)) },
                 label = { Text(stringResource(R.string.wireproxy_persistent_keepalive)) },
+                placeholder = { Text(stringResource(R.string.wireproxy_persistent_keepalive_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+
+            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+
+            Text("Raw wg.conf", style = MaterialTheme.typography.titleMedium)
+
+            OutlinedTextField(
+                value = wgConfigText,
+                onValueChange = { viewModel.updateWgConfigText(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp, max = 300.dp),
+                placeholder = { Text(stringResource(R.string.wireproxy_config_placeholder)) },
+                textStyle = MaterialTheme.typography.bodySmall
             )
 
             if (showFinishButton && onFinish != null) {

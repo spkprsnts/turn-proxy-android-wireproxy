@@ -29,6 +29,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.InterruptedIOException
 
 sealed class StartupResult {
     data object Success : StartupResult()
@@ -170,6 +171,10 @@ class ProxyService : Service() {
                     val l = line ?: continue
                     ProxyServiceState.addLog(l)
 
+                    if (!useCustom && l.contains("] Established ") && !l.contains("Wireproxy:")) {
+                        ProxyServiceState.setWorking(true)
+                    }
+
                     // Старт новой капча-сессии: бинарник логирует это перед открытием
                     // локального HTTP-сервера капчи. Сам URL прилетает следующей строкой.
                     if (l.contains("Triggering manual captcha fallback")) {
@@ -238,6 +243,8 @@ class ProxyService : Service() {
                     "Процесс завершился без вывода (код: $exitCode)"))
             }
 
+        } catch (e: InterruptedIOException) {
+            // pass
         } catch (e: Exception) {
             val msg = e.message ?: ""
             if (msg.contains("error=13") || msg.contains("Permission denied")) {
@@ -287,6 +294,7 @@ class ProxyService : Service() {
             stopSelf()
             return
         }
+        ProxyServiceState.setWorking(false)
         val baseDelay = minOf(1_000L * restartCount, 30_000L)
         val jitter = Random.nextLong(0, 500)
         val delay = baseDelay + jitter
@@ -362,6 +370,7 @@ class ProxyService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         userStopped.set(true)
+        ProxyServiceState.setWorking(false)
         ProxyServiceState.setRunning(false)
         handler.removeCallbacksAndMessages(null)
         unregisterNetworkCallback()

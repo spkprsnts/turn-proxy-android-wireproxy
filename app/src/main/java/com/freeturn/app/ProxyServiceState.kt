@@ -1,5 +1,7 @@
 package com.freeturn.app
 
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -21,9 +23,10 @@ data class CaptchaSession(val url: String, val sessionId: Long)
 object ProxyServiceState {
 
     private const val MAX_LOG_LINES = 200
-
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+    private val _isWorking = MutableStateFlow(false)
+    val isWorking: StateFlow<Boolean> = _isWorking.asStateFlow()
 
     private val _logs = MutableStateFlow<List<String>>(emptyList())
     val logs: StateFlow<List<String>> = _logs.asStateFlow()
@@ -43,6 +46,10 @@ object ProxyServiceState {
 
     fun setStartupResult(result: StartupResult?) {
         _startupResult.value = result
+    }
+
+    fun setWorking(value: Boolean) {
+        _isWorking.value = value
     }
 
     fun emitFailed() {

@@ -73,6 +73,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             proxyManager.observeCaptchaEvents()
         }
+        viewModelScope.launch {
+            proxyManager.observeProxyServiceWorking()
+        }
         proxyManager.syncInitialState()
     }
 
