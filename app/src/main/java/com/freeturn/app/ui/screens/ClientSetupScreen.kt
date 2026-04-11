@@ -135,13 +135,6 @@ fun ClientSetupScreen(
             // Подключение
             Text(stringResource(R.string.connection_title), style = MaterialTheme.typography.titleMedium)
 
-            SwitchRow(
-                label = stringResource(R.string.raw_mode),
-                description = stringResource(R.string.raw_mode_desc),
-                checked = isRawMode,
-                onCheckedChange = { isRawMode = it }
-            )
-
             if (isRawMode) {
                 OutlinedTextField(
                     value = rawCommand,
@@ -150,8 +143,6 @@ fun ClientSetupScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
-                HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
-
                 OutlinedTextField(
                     value = serverAddress.redact(privacyMode),
                     onValueChange = { if (!privacyMode) serverAddress = it },
@@ -299,6 +290,15 @@ fun ClientSetupScreen(
                     }
                 )
             }
+
+            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+
+            SwitchRow(
+                label = stringResource(R.string.raw_mode),
+                description = stringResource(R.string.raw_mode_desc),
+                checked = isRawMode,
+                onCheckedChange = { isRawMode = it }
+            )
 
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
