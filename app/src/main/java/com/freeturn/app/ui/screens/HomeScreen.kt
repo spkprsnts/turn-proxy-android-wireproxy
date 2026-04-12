@@ -705,7 +705,7 @@ private fun ProxyToggleButton(state: ProxyState, onClick: () -> Unit) {
             verticalArrangement = Arrangement.Center
         ) {
             when (state) {
-                is ProxyState.Starting, is ProxyState.Running, is ProxyState.CaptchaRequired -> CircularWavyProgressIndicator(color = contentColor, trackColor = containerColor)
+                is ProxyState.Starting, is ProxyState.Running, is ProxyState.CaptchaRequired -> CircularWavyProgressIndicator(color = contentColor)
                 is ProxyState.Working -> Icon(
                     painterResource(R.drawable.check_circle_24px), stringResource(R.string.proxy_active_stop),
                     Modifier.size(66.dp), tint = contentColor

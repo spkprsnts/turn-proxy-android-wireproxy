@@ -2,8 +2,9 @@ package com.freeturn.app.ui.navigation
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.freeturn.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -57,15 +57,14 @@ fun AppNavigation(
     startDestination: String? = null
 ) {
     val isInitialized by viewModel.isInitialized.collectAsStateWithLifecycle()
-    val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
 
     // Не строим NavHost пока DataStore не загружен — иначе startDestination
     // захватит дефолтный onboardingDone=false и всегда покажет онбординг
     if (!isInitialized) return
 
     val proxyState by viewModel.proxyState.collectAsStateWithLifecycle()
-    val finalStartDestination = remember(onboardingDone) {
-        startDestination ?: if (onboardingDone) Routes.HOME else Routes.ONBOARDING
+    val finalStartDestination = remember {
+        startDestination ?: if (viewModel.onboardingDone.value) Routes.HOME else Routes.ONBOARDING
     }
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -80,8 +79,8 @@ fun AppNavigation(
         bottomBar = {
             AnimatedVisibility(
                 visible = showBottomBar,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
+                enter = fadeIn(animationSpec = tween(150)),
+                exit = fadeOut(animationSpec = tween(150))
             ) {
                 AppNavigationBar(
                     currentRoute = currentRoute,
@@ -98,14 +97,16 @@ fun AppNavigation(
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             NavHost(
                 navController = navController, 
                 startDestination = finalStartDestination,
-                modifier = Modifier.statusBarsPadding() // Добавляем отступ для статус-бара сверху
+                modifier = Modifier.statusBarsPadding(),
+                enterTransition = { fadeIn(animationSpec = tween(200)) },
+                exitTransition = { fadeOut(animationSpec = tween(200)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(200)) },
+                popExitTransition = { fadeOut(animationSpec = tween(200)) }
             ) {
 
                 // Онбординг-мастер (без нижнего меню)
@@ -115,7 +116,7 @@ fun AppNavigation(
                         onSkip = {
                             viewModel.setOnboardingDone()
                             navController.navigate(Routes.CLIENT_SETUP) {
-                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                popUpTo(Routes.ONBOARDING) { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
@@ -125,27 +126,35 @@ fun AppNavigation(
                 // Основной поток (с нижним меню)
 
                 composable(Routes.WIREGUARD_CONFIG) {
-                    WireproxyConfigScreen(
-                        viewModel = viewModel,
-                        showFinishButton = false
-                    )
+                    Box(Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
+                        WireproxyConfigScreen(
+                            viewModel = viewModel,
+                            showFinishButton = false
+                        )
+                    }
                 }
 
                 composable(Routes.CLIENT_SETUP) {
-                    ClientSetupScreen(
-                        viewModel = viewModel,
-                        showFinishButton = false
-                    )
+                    Box(Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
+                        ClientSetupScreen(
+                            viewModel = viewModel,
+                            showFinishButton = false
+                        )
+                    }
                 }
 
                 composable(Routes.HOME) {
-                    HomeScreen(
-                        viewModel = viewModel
-                    )
+                    Box(Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
+                        HomeScreen(
+                            viewModel = viewModel
+                        )
+                    }
                 }
 
                 composable(Routes.LOGS) {
-                    LogsScreen(viewModel = viewModel)
+                    Box(Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
+                        LogsScreen(viewModel = viewModel)
+                    }
                 }
             }
         }

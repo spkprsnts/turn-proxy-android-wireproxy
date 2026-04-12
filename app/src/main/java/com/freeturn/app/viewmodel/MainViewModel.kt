@@ -66,6 +66,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
+    private val _onboardingDone = MutableStateFlow(false)
+    val onboardingDone: StateFlow<Boolean> = _onboardingDone.asStateFlow()
+
+    private val _themeMode = MutableStateFlow(ThemeMode.DARK)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _dynamicTheme = MutableStateFlow(true)
+    val dynamicTheme: StateFlow<Boolean> = _dynamicTheme.asStateFlow()
+
+    private val _clientConfig = MutableStateFlow(ClientConfig())
+    val clientConfig: StateFlow<ClientConfig> = _clientConfig.asStateFlow()
+
     // WireGuard config (wg.conf)
     private val _wgConfigText = MutableStateFlow("")
     val wgConfigText: StateFlow<String> = _wgConfigText.asStateFlow()
@@ -85,8 +97,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadWgConfig()
         viewModelScope.launch {
-            prefs.onboardingDoneFlow.first()
+            // Загружаем все критические настройки до завершения инициализации.
+            // Это предотвращает "мелькание" экранов (например, показ онбординга на долю секунды),
+            // так как при isInitialized = true все StateFlow уже будут иметь актуальные значения.
+            val done = prefs.onboardingDoneFlow.first()
+            val theme = prefs.themeModeFlow.first()
+            val dynamic = prefs.dynamicThemeFlow.first()
+            val config = prefs.clientConfigFlow.first()
+
+            _onboardingDone.value = done
+            _themeMode.value = theme
+            _dynamicTheme.value = dynamic
+            _clientConfig.value = config
+
             _isInitialized.value = true
+
+            // Запускаем фоновое обновление при изменении в DataStore
+            launch { prefs.onboardingDoneFlow.collect { _onboardingDone.value = it } }
+            launch { prefs.themeModeFlow.collect { _themeMode.value = it } }
+            launch { prefs.dynamicThemeFlow.collect { _dynamicTheme.value = it } }
+            launch { prefs.clientConfigFlow.collect { _clientConfig.value = it } }
         }
         viewModelScope.launch {
             proxyManager.observeProxyLifecycle()
@@ -120,23 +150,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         proxyManager.destroy()
     }
 
-    val clientConfig: StateFlow<ClientConfig> = prefs.clientConfigFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ClientConfig())
-
-    val onboardingDone: StateFlow<Boolean> = prefs.onboardingDoneFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
-    val dynamicTheme: StateFlow<Boolean> = prefs.dynamicThemeFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
-
     fun setDynamicTheme(enabled: Boolean) {
         viewModelScope.launch { prefs.setDynamicTheme(enabled) }
     }
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { prefs.setThemeMode(mode) }
     }
-    val themeMode: StateFlow<ThemeMode> = prefs.themeModeFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.DARK)
 
     val vkLinkHistory: StateFlow<List<String>> = prefs.vkLinkHistoryFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -318,7 +337,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val host = parts[0]
             val port = parts[1].toInt()
             host.isNotBlank() && port in 1..65535
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }

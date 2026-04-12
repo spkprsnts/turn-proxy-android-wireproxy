@@ -59,7 +59,7 @@ fun OnboardingScreen(
                 Brush.verticalGradient(
                     listOf(
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-                        MaterialTheme.colorScheme.background
+                        MaterialTheme.colorScheme.background.copy(alpha = 0.25f)
                     )
                 )
             )
@@ -79,14 +79,14 @@ fun OnboardingScreen(
                     modifier = Modifier
                         .size(148.dp)
                         .scale(pulseScale)
-                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                        .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.nearby_24px),
                         contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(100.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
