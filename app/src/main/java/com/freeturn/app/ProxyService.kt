@@ -132,13 +132,13 @@ class ProxyService : Service() {
             } else {
                 cmdArgs.add("-vk-link")
                 cmdArgs.add(cfg.vkLink)
+                if (cfg.manualCaptcha) cmdArgs.add("--manual-captcha")
             }
             cmdArgs.add("-listen"); cmdArgs.add(cfg.localPort)
             if (cfg.threads > 0) { cmdArgs.add("-n"); cmdArgs.add(cfg.threads.toString()) }
             if (cfg.vlessMode) cmdArgs.add("-vless")
             else if (cfg.useUdp) cmdArgs.add("-udp")
             if (cfg.noDtls) cmdArgs.add("-no-dtls")
-            if (cfg.manualCaptcha) cmdArgs.add("--manual-captcha")
             if (cfg.forceTurnPort443) { cmdArgs.add("-port"); cmdArgs.add("443") }
         }
 
