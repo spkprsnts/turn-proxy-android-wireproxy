@@ -736,6 +736,7 @@ private fun InfoBottomSheet(
     val uriHandler = LocalUriHandler.current
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
+    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     val showResetDialog = rememberSaveable { mutableStateOf(false) }
 
     val appVersion = remember {
@@ -878,27 +879,27 @@ private fun InfoBottomSheet(
             )
         }
 
-//        item { HorizontalDivider() }
-//
-//        // Обновление
-//        item {
-//            UpdateListItem(
-//                state = updateState,
-//                colors = listColors,
-//                onCheck = {
-//                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-//                    viewModel.checkForUpdate()
-//                },
-//                onDownload = {
-//                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-//                    viewModel.downloadUpdate()
-//                },
-//                onInstall = {
-//                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-//                    viewModel.installUpdate()
-//                }
-//            )
-//        }
+        item { HorizontalDivider() }
+
+        // Обновление
+        item {
+            UpdateListItem(
+                state = updateState,
+                colors = listColors,
+                onCheck = {
+                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                    viewModel.checkForUpdate()
+                },
+                onDownload = {
+                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                    viewModel.downloadUpdate()
+                },
+                onInstall = {
+                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                    viewModel.installUpdate()
+                }
+            )
+        }
 
         item { HorizontalDivider() }
 

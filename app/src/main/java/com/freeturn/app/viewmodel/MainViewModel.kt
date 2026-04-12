@@ -112,6 +112,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             _isInitialized.value = true
 
+            // Фоновая проверка обновлений при запуске
+            viewModelScope.launch {
+                delay(2000) // Небольшая задержка, чтобы не нагружать сеть сразу
+                appUpdater.checkForUpdate(silent = true)
+            }
+
             // Запускаем фоновое обновление при изменении в DataStore
             launch { prefs.onboardingDoneFlow.collect { _onboardingDone.value = it } }
             launch { prefs.themeModeFlow.collect { _themeMode.value = it } }

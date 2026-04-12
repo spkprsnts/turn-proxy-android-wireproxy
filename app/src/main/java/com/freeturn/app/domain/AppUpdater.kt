@@ -39,7 +39,16 @@ class AppUpdater(private val context: Context) {
     suspend fun checkForUpdate(silent: Boolean = false) {
         _state.value = UpdateState.Checking
         try {
-            val release = withContext(Dispatchers.IO) { fetchLatestRelease() }
+            var release = withContext(Dispatchers.IO) { fetchLatestRelease() }
+            
+            if (release == null) {
+                // Try again with wireproxy if conditions are met
+                val proxy = getWireproxyIfRunning()
+                if (proxy != null) {
+                    release = withContext(Dispatchers.IO) { fetchLatestRelease(proxy) }
+                }
+            }
+
             if (release == null) {
                 _state.value = if (silent) UpdateState.Idle
                 else UpdateState.Error(context.getString(R.string.error_release_info_failed))
@@ -75,7 +84,12 @@ class AppUpdater(private val context: Context) {
         _state.value = UpdateState.Downloading(0)
         try {
             withContext(Dispatchers.IO) {
-                val connection = URL(url).openConnection() as HttpURLConnection
+                val proxy = getWireproxyIfRunning()
+                val connection = if (proxy != null) {
+                    URL(url).openConnection(proxy)
+                } else {
+                    URL(url).openConnection()
+                } as HttpURLConnection
                 connection.instanceFollowRedirects = true
                 connection.connect()
 
@@ -86,13 +100,16 @@ class AppUpdater(private val context: Context) {
                     apkFile.outputStream().use { output ->
                         val buffer = ByteArray(8192)
                         var bytesRead: Int
+                        var lastProgress = -1
                         while (input.read(buffer).also { bytesRead = it } != -1) {
                             output.write(buffer, 0, bytesRead)
                             downloaded += bytesRead
                             if (totalSize > 0) {
-                                _state.value = UpdateState.Downloading(
-                                    (downloaded * 100 / totalSize).toInt()
-                                )
+                                val progress = (downloaded * 100 / totalSize).toInt()
+                                if (progress != lastProgress) {
+                                    _state.value = UpdateState.Downloading(progress)
+                                    lastProgress = progress
+                                }
                             }
                         }
                     }
@@ -127,9 +144,14 @@ class AppUpdater(private val context: Context) {
 
     // Private
 
-    private fun fetchLatestRelease(): JSONObject? {
-        val connection = URL(RELEASES_URL).openConnection() as HttpURLConnection
+    private fun fetchLatestRelease(proxy: java.net.Proxy? = null): JSONObject? {
+        val connection = if (proxy != null) {
+            URL(RELEASES_URL).openConnection(proxy)
+        } else {
+            URL(RELEASES_URL).openConnection()
+        } as HttpURLConnection
         connection.setRequestProperty("Accept", "application/vnd.github+json")
+        connection.setRequestProperty("User-Agent", "FreeTurn-App")
         connection.connectTimeout = 10_000
         connection.readTimeout = 10_000
 
@@ -137,8 +159,45 @@ class AppUpdater(private val context: Context) {
             if (connection.responseCode == 200) {
                 JSONObject(connection.inputStream.bufferedReader().readText())
             } else null
+        } catch (_: Exception) {
+            null
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun getWireproxyIfRunning(): java.net.Proxy? {
+        if (!com.freeturn.app.ProxyServiceState.isRunning.value) return null
+        if (com.freeturn.app.WireproxyServiceState.state.value != com.freeturn.app.viewmodel.WireproxyState.Running) return null
+
+        val configFile = File(context.filesDir, "wg.conf")
+        if (!configFile.exists()) return null
+
+        return try {
+            var socksAddr = ""
+            var currentSection = ""
+            configFile.forEachLine { line ->
+                val trimmed = line.trim()
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                    currentSection = trimmed.substring(1, trimmed.length - 1).lowercase()
+                } else if (trimmed.contains("=") && currentSection == "socks5") {
+                    val parts = trimmed.split("=", limit = 2)
+                    if (parts[0].trim().lowercase() == "bindaddress") {
+                        socksAddr = parts[1].trim()
+                    }
+                }
+            }
+
+            if (socksAddr.isNotBlank()) {
+                val parts = socksAddr.split(":")
+                if (parts.size == 2) {
+                    val host = parts[0]
+                    val port = parts[1].toInt()
+                    java.net.Proxy(java.net.Proxy.Type.SOCKS, java.net.InetSocketAddress(host, port))
+                } else null
+            } else null
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -155,7 +214,7 @@ class AppUpdater(private val context: Context) {
 
     companion object {
         private const val RELEASES_URL =
-            "https://github.com/spkprsnts/turn-proxy-android-wireproxy/releases/latest"
+            "https://api.github.com/repos/spkprsnts/turn-proxy-android-wireproxy/releases/latest"
 
         fun isNewer(remote: String, current: String): Boolean {
             val r = remote.split(".").map { it.toIntOrNull() ?: 0 }
