@@ -32,7 +32,15 @@ data class ClientConfig(
     val telemostDc: Boolean = true,
     val forceTurnPort443: Boolean = false,
     val wireproxyEnabled: Boolean = false
-)
+) {
+    fun getValidationErrorResId(): Int? {
+        return if (isRawMode) {
+            if (rawCommand.isBlank()) com.freeturn.app.R.string.error_raw_empty else null
+        } else {
+            if (serverAddress.isBlank() || vkLink.isBlank()) com.freeturn.app.R.string.error_settings_empty else null
+        }
+    }
+}
 
 enum class ThemeMode {
     DARK, LIGHT, SYSTEM

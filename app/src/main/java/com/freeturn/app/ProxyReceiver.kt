@@ -16,12 +16,17 @@ class ProxyReceiver : BroadcastReceiver() {
                 ProxyServiceState.setStartupResult(null)
 
                 val prefs = AppPreferences(context)
-                val wireproxyEnabled = runBlocking { prefs.clientConfigFlow.first().wireproxyEnabled }
+                val cfg = runBlocking { prefs.clientConfigFlow.first() }
+
+                cfg.getValidationErrorResId()?.let { errorRes ->
+                    ProxyServiceState.setStartupResult(StartupResult.Failed(context.getString(errorRes)))
+                    return
+                }
 
                 val serviceIntent = Intent(context, ProxyService::class.java)
                 context.startForegroundService(serviceIntent)
 
-                if (wireproxyEnabled) {
+                if (cfg.wireproxyEnabled) {
                     val wireproxyIntent = Intent(context, WireproxyService::class.java)
                     context.startForegroundService(wireproxyIntent)
                 }

@@ -6,12 +6,15 @@ import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import com.freeturn.app.data.AppPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.runBlocking
 
 class ProxyTileService : TileService() {
 
@@ -48,6 +51,17 @@ class ProxyTileService : TileService() {
     override fun onClick() {
         super.onClick()
         val isRunning = ProxyServiceState.isRunning.value
+
+        if (!isRunning) {
+            val prefs = AppPreferences(this)
+            val cfg = runBlocking { prefs.clientConfigFlow.first() }
+
+            cfg.getValidationErrorResId()?.let { errorRes ->
+                ProxyServiceState.setStartupResult(StartupResult.Failed(getString(errorRes)))
+                return
+            }
+        }
+
         val action = if (isRunning) {
             "com.freeturn.app.wireproxy.STOP_PROXY"
         } else {
