@@ -3,12 +3,6 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# ── JSch ──────────────────────────────────────────────────────────────────────
-# JSch загружает криптографические алгоритмы через reflection по имени класса.
-# Без этого правила R8 удалит/переименует нужные классы и SSH не будет работать.
--keep class com.jcraft.jsch.** { *; }
--dontwarn com.jcraft.jsch.**
-
 # ── Kotlin Coroutines ─────────────────────────────────────────────────────────
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
@@ -16,11 +10,8 @@
     volatile <fields>;
 }
 
-# ── Android Security Crypto (EncryptedSharedPreferences) ──────────────────────
--keep class androidx.security.crypto.** { *; }
-
 # ── DataStore ─────────────────────────────────────────────────────────────────
--keep class androidx.datastore.** { *; }
+# Preferences DataStore does not require broad keep rules.
 
 # ── Tink (транзитивная зависимость security-crypto) ───────────────────────────
 # Аннотационные библиотеки не включены в runtime, предупреждения безопасно подавить

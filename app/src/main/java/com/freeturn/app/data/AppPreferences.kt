@@ -1,12 +1,9 @@
 package com.freeturn.app.data
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -14,7 +11,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
-import androidx.core.content.edit
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_prefs")
 
@@ -70,22 +66,6 @@ class AppPreferences(context: Context) {
         val WIREPROXY_ENABLED = booleanPreferencesKey("wireproxy_enabled")
         val VK_LINK_HISTORY = stringPreferencesKey("vk_link_history")
         val SERVER_ADDR_HISTORY = stringPreferencesKey("server_addr_history")
-    }
-
-    // Шифрованное хранилище для SSH-пароля и ключа (Android Keystore + AES-256)
-    // Подавляем предупреждения: стабильной замены EncryptedSharedPreferences пока нет
-    @Suppress("DEPRECATION")
-    private val encryptedPrefs: SharedPreferences by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            "secure_ssh_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
     }
 
     val clientConfigFlow: Flow<ClientConfig> = context.dataStore.data
@@ -202,11 +182,10 @@ class AppPreferences(context: Context) {
         context.dataStore.edit { prefs -> prefs[THEME_MODE] = mode.name }
     }
 
-    /** Полный сброс: DataStore + EncryptedSharedPreferences + кастомный бинарник */
+    /** Полный сброс: DataStore + кастомный бинарник */
     suspend fun resetAll() {
         context.dataStore.edit { it.clear() }
         withContext(Dispatchers.IO) {
-            encryptedPrefs.edit { clear() }
             File(context.filesDir, "custom_vkturn").delete()
         }
     }

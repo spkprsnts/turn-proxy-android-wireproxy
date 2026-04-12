@@ -3,7 +3,6 @@
 package com.freeturn.app.ui.screens
 
 import android.content.ClipData
-import android.content.ClipboardManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -26,10 +25,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -39,10 +41,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.R
 import com.freeturn.app.ui.HapticUtil
 import com.freeturn.app.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun LogsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val logs by viewModel.logs.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
@@ -57,9 +62,10 @@ fun LogsScreen(viewModel: MainViewModel) {
                 actions = {
                     IconButton(
                         onClick = {
-                            val cm = context.getSystemService(ClipboardManager::class.java)
-                            cm.setPrimaryClip(ClipData.newPlainText("proxy_logs", logs.joinToString("\n")))
-                            HapticUtil.perform(context, HapticUtil.Pattern.SUCCESS)
+                            scope.launch {
+                                clipboard.setClipEntry(ClipData.newPlainText("proxy_logs", logs.joinToString("\n")).toClipEntry())
+                                HapticUtil.perform(context, HapticUtil.Pattern.SUCCESS)
+                            }
                         },
                         enabled = logs.isNotEmpty()
                     ) {

@@ -175,8 +175,8 @@ class LocalProxyManager(private val context: Context) {
 
     suspend fun setCustomKernel(uri: Uri): String? = withContext(Dispatchers.IO) {
         try {
-            val MAX_SIZE = 100L * 1024 * 1024 // 100 MB
-            val ELF_MAGIC = byteArrayOf(0x7F, 0x45, 0x4C, 0x46) // \x7FELF
+            val maxSize = 100L * 1024 * 1024 // 100 MB
+            val elfMagic = byteArrayOf(0x7F, 0x45, 0x4C, 0x46) // \x7FELF
 
             val inputStream = context.contentResolver.openInputStream(uri)
                 ?: return@withContext context.getString(R.string.error_file_open)
@@ -186,7 +186,7 @@ class LocalProxyManager(private val context: Context) {
             val headerRead = inputStream.read(header)
             inputStream.close()
 
-            if (headerRead < 4 || !header.contentEquals(ELF_MAGIC)) {
+            if (headerRead < 4 || !header.contentEquals(elfMagic)) {
                 return@withContext context.getString(R.string.error_not_elf)
             }
 
@@ -200,9 +200,9 @@ class LocalProxyManager(private val context: Context) {
                 dest.delete()
                 return@withContext context.getString(R.string.error_file_empty)
             }
-            if (dest.length() > MAX_SIZE) {
+            if (dest.length() > maxSize) {
                 dest.delete()
-                return@withContext context.getString(R.string.error_file_too_large, MAX_SIZE / 1024 / 1024)
+                return@withContext context.getString(R.string.error_file_too_large, maxSize / 1024 / 1024)
             }
 
             dest.setExecutable(true, false)

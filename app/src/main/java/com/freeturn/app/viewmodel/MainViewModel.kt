@@ -228,7 +228,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pingJob = viewModelScope.launch {
             _wireproxyPing.value = PingResult.Loading
             
-            var lastError: String? = null
             repeat(5) { attempt ->
                 // Отменяем, если Wireproxy перестал работать
                 if (WireproxyServiceState.state.value != WireproxyState.Running) {
@@ -249,8 +248,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         }
                         PingResult.Success(time)
-                    } catch (e: Exception) {
-                        lastError = e.message ?: "Unknown error"
+                    } catch (_: Exception) {
                         null
                     }
                 }
@@ -263,7 +261,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (attempt < 2) delay(500) // Пауза перед следующей попыткой
             }
             
-            _wireproxyPing.value = PingResult.Error(lastError ?: "")
+            _wireproxyPing.value = PingResult.Error
         }
     }
 
@@ -380,7 +378,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     sealed class PingResult {
         object Loading : PingResult()
         data class Success(val ms: Long) : PingResult()
-        data class Error(val message: String) : PingResult()
+        object Error : PingResult()
     }
 
     private fun WgConfig.toWgString(): String {

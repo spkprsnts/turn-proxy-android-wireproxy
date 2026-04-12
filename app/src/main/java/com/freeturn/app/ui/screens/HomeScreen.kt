@@ -83,22 +83,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.platform.LocalClipboardManager
+import android.content.ClipData
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -407,7 +407,7 @@ fun HomeScreen(
                                 }
 
                                 val wgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
-                                val clipboardManager = LocalClipboardManager.current
+                                val clipboard = LocalClipboard.current
                                 val scope = rememberCoroutineScope()
                                 val httpCopiedText = stringResource(R.string.wireproxy_http_copied)
                                 val socks5CopiedText = stringResource(R.string.wireproxy_socks5_copied)
@@ -417,9 +417,9 @@ fun HomeScreen(
                                         label = stringResource(R.string.wireproxy_http),
                                         address = wgConfig.httpBindAddress,
                                         onCopy = {
-                                            clipboardManager.setText(AnnotatedString(it))
                                             HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
                                             scope.launch {
+                                                clipboard.setClipEntry(ClipData.newPlainText("wireproxy http", it).toClipEntry())
                                                 snackbarHostState.showSnackbar(httpCopiedText)
                                             }
                                         }
@@ -430,9 +430,9 @@ fun HomeScreen(
                                         label = stringResource(R.string.wireproxy_socks5),
                                         address = wgConfig.socks5BindAddress,
                                         onCopy = {
-                                            clipboardManager.setText(AnnotatedString(it))
                                             HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
                                             scope.launch {
+                                                clipboard.setClipEntry(ClipData.newPlainText("wireproxy socks5", it).toClipEntry())
                                                 snackbarHostState.showSnackbar(socks5CopiedText)
                                             }
                                         }
@@ -476,7 +476,7 @@ fun HomeScreen(
                                         "-"
                                     )
                                 ) {
-                                    // Параметр с значением: объединяем в одну строку
+                                    // Параметр со значением: объединяем в одну строку
                                     args.add("$part ${parts[i + 1]}")
                                     i += 2
                                 } else {
@@ -736,7 +736,7 @@ private fun InfoBottomSheet(
     val uriHandler = LocalUriHandler.current
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
-    var showResetDialog by rememberSaveable { mutableStateOf(false) }
+    val showResetDialog = rememberSaveable { mutableStateOf(false) }
 
     val appVersion = remember {
         try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "—" }
@@ -923,7 +923,7 @@ private fun InfoBottomSheet(
                 },
                 modifier = Modifier.clickable {
                     HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                    showResetDialog = true
+                    showResetDialog.value = true
                 }
             )
         }
@@ -942,15 +942,15 @@ private fun InfoBottomSheet(
         }
     }
 
-    if (showResetDialog) {
+    if (showResetDialog.value) {
         AlertDialog(
-            onDismissRequest = { showResetDialog = false },
+            onDismissRequest = { showResetDialog.value = false },
             title = { Text(stringResource(R.string.reset_all_settings_title)) },
             text = { Text(stringResource(R.string.reset_all_settings_desc)) },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showResetDialog = false
+                        showResetDialog.value = false
                         viewModel.resetAllSettings(context)
                     },
                     colors = ButtonDefaults.textButtonColors(
@@ -959,7 +959,7 @@ private fun InfoBottomSheet(
                 ) { Text(stringResource(R.string.reset)) }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = { showResetDialog.value = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

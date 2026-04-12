@@ -1,9 +1,9 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class)
 
 package com.freeturn.app.ui.screens
 
 import android.annotation.SuppressLint
-import android.content.ClipboardManager
+import android.content.ClipData
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +16,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,6 +28,7 @@ import com.freeturn.app.R
 import com.freeturn.app.ui.HapticUtil
 import com.freeturn.app.ui.ValidatorUtils
 import com.freeturn.app.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
@@ -35,6 +38,8 @@ fun WireproxyConfigScreen(
     onFinish: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val privacyMode by viewModel.privacyMode.collectAsStateWithLifecycle()
     val wgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
     val wgConfigText by viewModel.wgConfigText.collectAsStateWithLifecycle()
@@ -78,12 +83,12 @@ fun WireproxyConfigScreen(
                 title = { Text(stringResource(R.string.wireproxy_config_title)) },
                 actions = {
                     IconButton(onClick = {
-                        val cm = context.getSystemService(ClipboardManager::class.java)
                         // Копирование всего конфига в буфер
-                        val clip = android.content.ClipData.newPlainText("wg_config", wgConfigText)
-                        cm.setPrimaryClip(clip)
-                        HapticUtil.perform(context, HapticUtil.Pattern.SUCCESS)
-                        Toast.makeText(context, R.string.copy, Toast.LENGTH_SHORT).show()
+                        scope.launch {
+                            clipboard.setClipEntry(ClipData.newPlainText("wg_config", wgConfigText).toClipEntry())
+                            HapticUtil.perform(context, HapticUtil.Pattern.SUCCESS)
+                            Toast.makeText(context, R.string.copy, Toast.LENGTH_SHORT).show()
+                        }
                     }) {
                         Icon(painterResource(R.drawable.content_copy_24px), stringResource(R.string.copy))
                     }
@@ -122,13 +127,14 @@ fun WireproxyConfigScreen(
                 }
                 Button(
                     onClick = {
-                        val cm = context.getSystemService(ClipboardManager::class.java)
-                        val clip = cm?.primaryClip
-                        if (clip != null && clip.itemCount > 0) {
-                            val text = clip.getItemAt(0).text?.toString() ?: ""
-                            if (text.isNotBlank()) {
-                                viewModel.updateWgConfigText(text)
-                                Toast.makeText(context, R.string.wireproxy_import_success, Toast.LENGTH_SHORT).show()
+                        scope.launch {
+                            val clipEntry = clipboard.getClipEntry()
+                            if (clipEntry != null) {
+                                val text = clipEntry.clipData.getItemAt(0).text?.toString() ?: ""
+                                if (text.isNotBlank()) {
+                                    viewModel.updateWgConfigText(text)
+                                    Toast.makeText(context, R.string.wireproxy_import_success, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     },
