@@ -12,7 +12,7 @@ object ValidatorUtils {
         // 2. Доменные имена (example.com)
         // 3. IPv4 (127.0.0.1)
         // 4. Обязательный порт через двоеточие
-        val pattern = Regex("""^((?:localhost)|(?:(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*(?:[A-Za-z0-9]|[A-Za-z0-9][a-zA-Z0-9\-]*[A-Za-z0-9])|(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})):(\d{1,5})$""")
+        val pattern = Regex("""^(localhost|(?:(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*(?:[A-Za-z0-9]|[A-Za-z0-9][a-zA-Z0-9\-]*[A-Za-z0-9])|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})$""")
 
         val match = pattern.matchEntire(input) ?: return false
 
@@ -21,5 +21,13 @@ object ValidatorUtils {
         val port = portString.toIntOrNull() ?: return false
 
         return port in 1..65535
+    }
+
+    /**
+     * Проверяет, является ли строка валидным URL.
+     */
+    fun isValidUrl(input: String): Boolean {
+        if (input.isBlank()) return true
+        return android.util.Patterns.WEB_URL.matcher(input).matches()
     }
 }
