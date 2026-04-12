@@ -1,5 +1,7 @@
 package com.freeturn.app
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
@@ -7,6 +9,7 @@ import android.service.quicksettings.TileService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
@@ -15,12 +18,24 @@ class ProxyTileService : TileService() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var statusJob: Job? = null
 
+    companion object {
+        fun requestUpdate(context: Context) {
+            try {
+                requestListeningState(context, ComponentName(context, ProxyTileService::class.java))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     override fun onStartListening() {
         super.onStartListening()
         statusJob?.cancel()
-        statusJob = ProxyServiceState.isRunning
-            .onEach { isRunning ->
-                updateTile(isRunning)
+        statusJob = combine(ProxyServiceState.isRunning, ProxyServiceState.isWorking, ProxyServiceState.captchaSession) { running, working, captchaSession ->
+            Triple(running, working, captchaSession != null)
+        }
+            .onEach { (isRunning, isWorking, isCaptcha) ->
+                updateTileState(isRunning, isWorking, isCaptcha)
             }
             .launchIn(serviceScope)
     }
@@ -43,13 +58,22 @@ class ProxyTileService : TileService() {
             this.action = action
         }
         sendBroadcast(intent)
+
+        if (!isRunning) {
+            updateTileState(isRunning = true, isWorking = false)
+        }
     }
 
-    private fun updateTile(isRunning: Boolean) {
+    private fun updateTileState(isRunning: Boolean, isWorking: Boolean, isCaptcha: Boolean = false) {
         val tile = qsTile ?: return
         tile.state = if (isRunning) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            tile.subtitle = if (isRunning) getString(R.string.tile_active) else getString(R.string.tile_inactive)
+            tile.subtitle = when {
+                isCaptcha -> getString(R.string.tile_captcha)
+                isRunning && isWorking -> getString(R.string.tile_active)
+                isRunning -> getString(R.string.proxy_starting)
+                else -> ""
+            }
         }
         tile.updateTile()
     }

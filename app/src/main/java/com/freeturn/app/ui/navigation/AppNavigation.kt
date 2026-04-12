@@ -52,7 +52,10 @@ object Routes {
 private val BOTTOM_NAV_ROUTES = setOf(Routes.HOME, Routes.LOGS, Routes.CLIENT_SETUP, Routes.WIREGUARD_CONFIG)
 
 @Composable
-fun AppNavigation(viewModel: MainViewModel) {
+fun AppNavigation(
+    viewModel: MainViewModel,
+    startDestination: String? = null
+) {
     val isInitialized by viewModel.isInitialized.collectAsStateWithLifecycle()
     val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
 
@@ -61,7 +64,9 @@ fun AppNavigation(viewModel: MainViewModel) {
     if (!isInitialized) return
 
     val proxyState by viewModel.proxyState.collectAsStateWithLifecycle()
-    val startDestination = remember { if (onboardingDone) Routes.HOME else Routes.ONBOARDING }
+    val finalStartDestination = remember(onboardingDone) {
+        startDestination ?: if (onboardingDone) Routes.HOME else Routes.ONBOARDING
+    }
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -99,7 +104,7 @@ fun AppNavigation(viewModel: MainViewModel) {
         ) {
             NavHost(
                 navController = navController, 
-                startDestination = startDestination,
+                startDestination = finalStartDestination,
                 modifier = Modifier.statusBarsPadding() // Добавляем отступ для статус-бара сверху
             ) {
 

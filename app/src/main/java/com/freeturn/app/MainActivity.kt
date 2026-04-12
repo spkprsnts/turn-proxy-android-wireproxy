@@ -8,15 +8,15 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.ui.HapticUtil
 import com.freeturn.app.ui.navigation.AppNavigation
+import com.freeturn.app.ui.navigation.Routes
 import com.freeturn.app.ui.theme.FreeTurnTheme
 import com.freeturn.app.viewmodel.MainViewModel
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
 
@@ -26,20 +26,30 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        // Обработка перехода из плитки (QS Tile)
+        val fromTile = intent?.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES"
+        
         // Удерживаем системный splash пока ViewModel не инициализируется
         splashScreen.setKeepOnScreenCondition { !viewModel.isInitialized.value }
 
         HapticUtil.perform(this, HapticUtil.Pattern.LAUNCH)
         enableEdgeToEdge()
         setContent {
+            val isInitialized by viewModel.isInitialized.collectAsStateWithLifecycle()
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
+            
             FreeTurnTheme(themeMode = themeMode, dynamicColor = dynamicTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(viewModel = viewModel)
+                    if (isInitialized) {
+                        AppNavigation(
+                            viewModel = viewModel,
+                            startDestination = if (fromTile) Routes.HOME else null
+                        )
+                    }
                 }
             }
         }

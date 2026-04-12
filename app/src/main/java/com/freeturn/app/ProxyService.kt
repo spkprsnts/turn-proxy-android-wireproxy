@@ -85,6 +85,7 @@ class ProxyService : Service() {
         startForeground(1, notification)
 
         ProxyServiceState.setRunning(true)
+        ProxyTileService.requestUpdate(this)
         userStopped.set(false)
         restartCount = 0
 
@@ -179,6 +180,7 @@ class ProxyService : Service() {
 
                     if (!useCustom && (l.contains("Established") || l.contains("listening on")) && !l.contains("[Wireproxy]")) {
                         ProxyServiceState.setWorking(true)
+                        ProxyTileService.requestUpdate(this)
                     }
 
                     // Старт новой капча-сессии: бинарник логирует это перед открытием
@@ -198,6 +200,7 @@ class ProxyService : Service() {
                             CaptchaSession(url, captchaSessionCounter)
                         )
                         captchaActive = true
+                        ProxyTileService.requestUpdate(this)
                     }
 
                     // Капча-сессия закончилась: бинарник либо завершил auth-чейн
@@ -301,6 +304,7 @@ class ProxyService : Service() {
             return
         }
         ProxyServiceState.setWorking(false)
+        ProxyTileService.requestUpdate(this)
         val baseDelay = minOf(1_000L * restartCount, 30_000L)
         val jitter = Random.nextLong(0, 500)
         val delay = baseDelay + jitter
@@ -378,6 +382,7 @@ class ProxyService : Service() {
         userStopped.set(true)
         ProxyServiceState.setWorking(false)
         ProxyServiceState.setRunning(false)
+        ProxyTileService.requestUpdate(this)
         handler.removeCallbacksAndMessages(null)
         unregisterNetworkCallback()
         ProxyServiceState.addLog(getString(R.string.log_stop_ui))
