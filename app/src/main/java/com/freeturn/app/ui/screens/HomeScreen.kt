@@ -500,6 +500,17 @@ fun HomeScreen(
                                 stringResource(R.string.server),
                                 clientConfig.serverAddress.redact(privacyMode)
                             )
+                            val vkLink = clientConfig.vkLink.redact(privacyMode)
+                            if (vkLink.isNotBlank()) {
+                                ConfigRow(
+                                    stringResource(R.string.call_link),
+                                    if (vkLink.length > 30) {
+                                        vkLink.take(21) + "..." + vkLink.takeLast(6)
+                                    } else {
+                                        vkLink
+                                    }
+                                )
+                            }
                             ConfigRow(stringResource(R.string.threads), "${clientConfig.threads}")
                             ConfigRow(
                                 stringResource(R.string.transport_protocol),
