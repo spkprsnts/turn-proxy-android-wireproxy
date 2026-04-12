@@ -28,7 +28,10 @@
     <string name="wireproxy_running_state">Запущен</string>
     <string name="error_format_short">Ошибка: %1$s</string>
     <string name="android_client">Android-клиент</string>
+    <string name="android_client_original">Android-клиент (оригинал)</string>
     <string name="proxy_core">Прокси-ядро</string>
+    <string name="proxy_core_use">Прокси-ядро (используемое)</string>
+    <string name="wireproxy">Wireproxy</string>
     <string name="btn_open">Открыть</string>
     <string name="btn_close">Закрыть</string>
     <string name="reset_settings">Сбросить настройки</string>

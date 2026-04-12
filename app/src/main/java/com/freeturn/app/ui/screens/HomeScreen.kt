@@ -754,6 +754,17 @@ private fun InfoBottomSheet(
         item {
             RepoLinkItem(
                 title = stringResource(R.string.android_client),
+                subtitle = "spkprsnts/turn-proxy-android-wireproxy",
+                url = "https://github.com/spkprsnts/turn-proxy-android-wireproxy",
+                containerColor = containerColor,
+                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                onOpen = { uriHandler.openUri(it) }
+            )
+        }
+
+        item {
+            RepoLinkItem(
+                title = stringResource(R.string.android_client_original),
                 subtitle = "samosvalishe/turn-proxy-android",
                 url = "https://github.com/samosvalishe/turn-proxy-android",
                 containerColor = containerColor,
@@ -772,6 +783,30 @@ private fun InfoBottomSheet(
                 onOpen = { uriHandler.openUri(it) }
             )
         }
+
+        item {
+            RepoLinkItem(
+                title = stringResource(R.string.proxy_core_use),
+                subtitle = "alxmcp/vk-turn-proxy",
+                url = "https://github.com/alxmcp/vk-turn-proxy",
+                containerColor = containerColor,
+                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                onOpen = { uriHandler.openUri(it) }
+            )
+        }
+
+        item {
+            RepoLinkItem(
+                title = stringResource(R.string.wireproxy),
+                subtitle = "windtf/wireproxy",
+                url = "https://github.com/windtf/wireproxy",
+                containerColor = containerColor,
+                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                onOpen = { uriHandler.openUri(it) }
+            )
+        }
+
+        item { Spacer(Modifier.height(6.dp)) }
 
         item { HorizontalDivider() }
 
@@ -1001,29 +1036,40 @@ private fun RepoLinkItem(
     onHaptic: () -> Unit,
     onOpen: (String) -> Unit
 ) {
-    ListItem(
-        headlineContent = { Text(title) },
-        colors = ListItemDefaults.colors(containerColor = containerColor),
-        supportingContent = {
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        },
-        trailingContent = {
+    Surface(
+        color = containerColor,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onHaptic()
+                onOpen(url)
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
             Icon(
-                painterResource(R.drawable.open_in_new_24px),
+                painter = painterResource(R.drawable.open_in_new_24px),
                 contentDescription = stringResource(R.string.btn_open),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-        },
-        modifier = Modifier.clickable {
-            onHaptic()
-            onOpen(url)
         }
-    )
+    }
 }
 
 
