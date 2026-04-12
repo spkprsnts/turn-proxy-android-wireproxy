@@ -60,6 +60,8 @@ class AppPreferences(context: Context) {
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val WIREPROXY_ENABLED = booleanPreferencesKey("wireproxy_enabled")
+        val VK_LINK_HISTORY = stringPreferencesKey("vk_link_history")
+        val SERVER_ADDR_HISTORY = stringPreferencesKey("server_addr_history")
     }
 
     // Шифрованное хранилище для SSH-пароля и ключа (Android Keystore + AES-256)
@@ -111,6 +113,56 @@ class AppPreferences(context: Context) {
         .map { prefs ->
             ThemeMode.valueOf(prefs[THEME_MODE] ?: ThemeMode.DARK.name)
         }
+
+    val vkLinkHistoryFlow: Flow<List<String>> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
+            val historyString = prefs[VK_LINK_HISTORY] ?: ""
+            if (historyString.isBlank()) emptyList()
+            else historyString.split("|").filter { it.isNotBlank() }
+        }
+
+    val serverAddressHistoryFlow: Flow<List<String>> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
+            val historyString = prefs[SERVER_ADDR_HISTORY] ?: ""
+            if (historyString.isBlank()) emptyList()
+            else historyString.split("|").filter { it.isNotBlank() }
+        }
+
+    suspend fun addVkLinkToHistory(link: String) {
+        if (link.isBlank()) return
+        context.dataStore.edit { prefs ->
+            val currentHistory = prefs[VK_LINK_HISTORY]?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+            val newHistory = (listOf(link) + currentHistory.filter { it != link }).take(3)
+            prefs[VK_LINK_HISTORY] = newHistory.joinToString("|")
+        }
+    }
+
+    suspend fun addServerAddressToHistory(address: String) {
+        if (address.isBlank()) return
+        context.dataStore.edit { prefs ->
+            val currentHistory = prefs[SERVER_ADDR_HISTORY]?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+            val newHistory = (listOf(address) + currentHistory.filter { it != address }).take(3)
+            prefs[SERVER_ADDR_HISTORY] = newHistory.joinToString("|")
+        }
+    }
+
+    suspend fun removeVkLinkFromHistory(link: String) {
+        context.dataStore.edit { prefs ->
+            val currentHistory = prefs[VK_LINK_HISTORY]?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+            val newHistory = currentHistory.filter { it != link }
+            prefs[VK_LINK_HISTORY] = newHistory.joinToString("|")
+        }
+    }
+
+    suspend fun removeServerAddressFromHistory(address: String) {
+        context.dataStore.edit { prefs ->
+            val currentHistory = prefs[SERVER_ADDR_HISTORY]?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+            val newHistory = currentHistory.filter { it != address }
+            prefs[SERVER_ADDR_HISTORY] = newHistory.joinToString("|")
+        }
+    }
 
     suspend fun saveClientConfig(config: ClientConfig) {
         context.dataStore.edit { prefs ->

@@ -10,6 +10,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +29,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
@@ -48,13 +54,16 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.freeturn.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +73,7 @@ import com.freeturn.app.ui.ValidatorUtils
 import com.freeturn.app.viewmodel.MainViewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * @param showFinishButton  true — онбординг-флоу, показываем кнопку «Завершить».
@@ -81,7 +91,11 @@ fun ClientSetupScreen(
     val kernelError by viewModel.kernelError.collectAsStateWithLifecycle()
     val privacyMode by viewModel.privacyMode.collectAsStateWithLifecycle()
 
+    val vkLinkHistory by viewModel.vkLinkHistory.collectAsStateWithLifecycle()
+    val serverAddressHistory by viewModel.serverAddressHistory.collectAsStateWithLifecycle()
+
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val kernelPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -161,6 +175,8 @@ fun ClientSetupScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
+                var showServerHistoryMenu by remember { mutableStateOf(false) }
+
                 OutlinedTextField(
                     value = serverAddress.redact(privacyMode),
                     onValueChange = { if (!privacyMode) serverAddress = it },
@@ -170,19 +186,147 @@ fun ClientSetupScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     readOnly = privacyMode,
-                    supportingText = { Text(stringResource(R.string.server_address_support)) }
+                    supportingText = { Text(stringResource(R.string.server_address_support)) },
+                    trailingIcon = {
+                        Box {
+                            IconButton(onClick = { showServerHistoryMenu = true }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.database_outlined_24px),
+                                    contentDescription = stringResource(R.string.history_label)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showServerHistoryMenu,
+                                onDismissRequest = { showServerHistoryMenu = false }
+                            ) {
+                                if (serverAddressHistory.isEmpty()) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.history_empty)) },
+                                        onClick = { showServerHistoryMenu = false },
+                                        enabled = false
+                                    )
+                                } else {
+                                    serverAddressHistory.forEach { historyItem ->
+                                        DropdownMenuItem(
+                                            modifier = Modifier.pointerInput(historyItem) {
+                                                awaitEachGesture {
+                                                    awaitFirstDown(requireUnconsumed = false)
+                                                    var isLongPress = false
+                                                    val job = scope.launch {
+                                                        delay(1500)
+                                                        HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                        delay(1500)
+                                                        isLongPress = true
+                                                        HapticUtil.perform(context, HapticUtil.Pattern.ERROR)
+                                                        viewModel.removeServerAddressFromHistory(historyItem)
+                                                    }
+                                                    val up = waitForUpOrCancellation()
+                                                    job.cancel()
+                                                    if (isLongPress) {
+                                                        up?.consume()
+                                                    }
+                                                }
+                                            },
+                                            text = {
+                                                val text = historyItem.redact(privacyMode)
+                                                Text(
+                                                    text = if (text.length > 30) {
+                                                        text.take(21) + "..." + text.takeLast(6)
+                                                    } else {
+                                                        text
+                                                    },
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Visible
+                                                )
+                                            },
+                                            onClick = {
+                                                HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                serverAddress = historyItem
+                                                showServerHistoryMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 )
+
+                var showHistoryMenu by remember { mutableStateOf(false) }
 
                 OutlinedTextField(
                     value = vkLink.redact(privacyMode),
                     onValueChange = { if (!privacyMode) vkLink = it },
                     label = { Text(stringResource(R.string.vk_link_label)) },
                     placeholder = { Text(stringResource(R.string.vk_link_placeholder)) },
-                    isError = vkLink.isBlank(),
+                    isError = !ValidatorUtils.isValidUrl(vkLink) || vkLink.isBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     readOnly = privacyMode,
-                    supportingText = { Text(stringResource(R.string.vk_link_support)) }
+                    supportingText = { Text(stringResource(R.string.vk_link_support)) },
+                    trailingIcon = {
+                        Box {
+                            IconButton(onClick = { showHistoryMenu = true }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.database_outlined_24px),
+                                    contentDescription = stringResource(R.string.history_label)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showHistoryMenu,
+                                onDismissRequest = { showHistoryMenu = false }
+                            ) {
+                                if (vkLinkHistory.isEmpty()) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.history_empty)) },
+                                        onClick = { showHistoryMenu = false },
+                                        enabled = false
+                                    )
+                                } else {
+                                    vkLinkHistory.forEach { historyItem ->
+                                        DropdownMenuItem(
+                                            modifier = Modifier.pointerInput(historyItem) {
+                                                awaitEachGesture {
+                                                    awaitFirstDown(requireUnconsumed = false)
+                                                    var isLongPress = false
+                                                    val job = scope.launch {
+                                                        delay(1500)
+                                                        HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                        delay(1500)
+                                                        isLongPress = true
+                                                        HapticUtil.perform(context, HapticUtil.Pattern.ERROR)
+                                                        viewModel.removeVkLinkFromHistory(historyItem)
+                                                    }
+                                                    val up = waitForUpOrCancellation()
+                                                    job.cancel()
+                                                    if (isLongPress) {
+                                                        up?.consume()
+                                                    }
+                                                }
+                                            },
+                                            text = { 
+                                                val text = historyItem.redact(privacyMode)
+                                                Text(
+                                                    text = if (text.length > 30) {
+                                                        text.take(21) + "..." + text.takeLast(6)
+                                                    } else {
+                                                        text
+                                                    },
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Visible
+                                                ) 
+                                            },
+                                            onClick = {
+                                                HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                vkLink = historyItem
+                                                showHistoryMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 )
 
                 AnimatedVisibility(

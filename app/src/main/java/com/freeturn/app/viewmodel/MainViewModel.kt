@@ -138,6 +138,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val themeMode: StateFlow<ThemeMode> = prefs.themeModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.DARK)
 
+    val vkLinkHistory: StateFlow<List<String>> = prefs.vkLinkHistoryFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val serverAddressHistory: StateFlow<List<String>> = prefs.serverAddressHistoryFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val _privacyMode = MutableStateFlow(false)
     val privacyMode: StateFlow<Boolean> = _privacyMode.asStateFlow()
 
@@ -149,6 +155,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (clientConfig.value.wireproxyEnabled && !isValidHostPort(_wgConfig.value.socks5BindAddress)) {
                 updateWgConfig(_wgConfig.value.copy(socks5BindAddress = WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS))
             }
+            prefs.addVkLinkToHistory(clientConfig.value.vkLink)
+            prefs.addServerAddressToHistory(clientConfig.value.serverAddress)
             proxyManager.startProxy(clientConfig.value)
         }
     }
@@ -179,6 +187,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Preferences
     fun saveClientConfig(config: ClientConfig) {
         viewModelScope.launch { prefs.saveClientConfig(config) }
+    }
+
+    fun removeVkLinkFromHistory(link: String) {
+        viewModelScope.launch { prefs.removeVkLinkFromHistory(link) }
+    }
+
+    fun removeServerAddressFromHistory(address: String) {
+        viewModelScope.launch { prefs.removeServerAddressFromHistory(address) }
     }
 
     fun setOnboardingDone() {

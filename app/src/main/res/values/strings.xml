@@ -89,6 +89,8 @@
     <string name="vk_link_label">Ссылка VK-звонок/YA-телемост</string>
     <string name="vk_link_placeholder">https://vk.com/call/…</string>
     <string name="vk_link_support">VK: Звонки → Создать → Скопировать ссылку (не нажимайте «Завершить»)</string>
+    <string name="history_label">История</string>
+    <string name="history_empty">История пуста</string>
     <string name="telemost_dc_label">Telemost DC</string>
     <string name="telemost_dc_desc">Использовать Datachannel для передачи данных в Telemost</string>
     <string name="local_listen_address">Локальный адрес прослушивания</string>
@@ -194,7 +196,7 @@
     <string name="error_connecting">Ошибка подключения</string>
 
     <string name="notification_title">VK TURN Proxy</string>
-    <string name="notification_reconnecting">Переподключение (%1$d/%2$d)...</string>
+    <string name="notification_reconnecting">Переподключение (%1$d/%2$d)…</string>
     <string name="notification_network_change">Смена сети, переподключение…</string>
     <string name="error_with_details">%1$s: %2$s</string>
     <string name="redacted_value">••••••</string>
