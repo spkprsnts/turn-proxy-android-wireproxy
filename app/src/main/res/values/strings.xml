@@ -200,6 +200,8 @@
     <string name="error_connecting">Ошибка подключения</string>
 
     <string name="notification_title">VK TURN Proxy</string>
+    <string name="tile_active">Запущено</string>
+    <string name="tile_inactive">Отключен</string>
     <string name="notification_reconnecting">Переподключение (%1$d/%2$d)…</string>
     <string name="notification_network_change">Смена сети, переподключение…</string>
     <string name="error_with_details">%1$s: %2$s</string>

@@ -3,7 +3,6 @@ package com.freeturn.app.domain
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import com.freeturn.app.R
 import com.freeturn.app.ProxyService
 import com.freeturn.app.WireproxyService
@@ -111,20 +110,11 @@ class LocalProxyManager(private val context: Context) {
         
         // Start services
         val intent = Intent(context, ProxyService::class.java)
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
-        }
+        context.startForegroundService(intent)
 
         if (cfg.wireproxyEnabled) {
             val wireproxyIntent = Intent(context, WireproxyService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(wireproxyIntent)
-            } else {
-                context.startService(wireproxyIntent)
-            }
+            context.startForegroundService(wireproxyIntent)
         }
 
         val result = withTimeoutOrNull(5_000L) {
@@ -156,11 +146,7 @@ class LocalProxyManager(private val context: Context) {
 
     fun startWireproxy() {
         val wireproxyIntent = Intent(context, WireproxyService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(wireproxyIntent)
-        } else {
-            context.startService(wireproxyIntent)
-        }
+        context.startForegroundService(wireproxyIntent)
     }
 
     fun stopWireproxy() {

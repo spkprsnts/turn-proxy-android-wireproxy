@@ -3,7 +3,9 @@ package com.freeturn.app
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import com.freeturn.app.data.AppPreferences
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 class ProxyReceiver : BroadcastReceiver() {
 
@@ -12,14 +14,16 @@ class ProxyReceiver : BroadcastReceiver() {
             "com.freeturn.app.wireproxy.START_PROXY" -> {
                 ProxyServiceState.clearLogs()
                 ProxyServiceState.setStartupResult(null)
+
+                val prefs = AppPreferences(context)
+                val wireproxyEnabled = runBlocking { prefs.clientConfigFlow.first().wireproxyEnabled }
+
                 val serviceIntent = Intent(context, ProxyService::class.java)
-                val wireproxyIntent = Intent(context, WireproxyService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(serviceIntent)
+                context.startForegroundService(serviceIntent)
+
+                if (wireproxyEnabled) {
+                    val wireproxyIntent = Intent(context, WireproxyService::class.java)
                     context.startForegroundService(wireproxyIntent)
-                } else {
-                    context.startService(serviceIntent)
-                    context.startService(wireproxyIntent)
                 }
             }
             "com.freeturn.app.wireproxy.STOP_PROXY" -> {
