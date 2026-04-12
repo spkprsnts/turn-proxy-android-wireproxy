@@ -11,8 +11,8 @@ android {
         applicationId = "com.freeturn.app.wireproxy"
         minSdk = project.property("project.minSdk").toString().toInt()
         targetSdk = project.property("project.targetSdk").toString().toInt()
-        versionCode = 13
-        versionName = "1.7.0.3"
+        versionCode = 20
+        versionName = "1.7.0.4"
     }
 
     packaging {
