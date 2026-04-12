@@ -87,7 +87,11 @@ class LocalProxyManager(private val context: Context) {
     }
 
     fun syncInitialState() {
-        if (ProxyServiceState.isRunning.value) updateStateAfterSuccess()
+        if (ProxyServiceState.isWorking.value) {
+            _proxyState.value = ProxyState.Working
+        } else if (ProxyServiceState.isRunning.value) {
+            updateStateAfterSuccess()
+        }
     }
 
     suspend fun startProxy(cfg: ClientConfig) {

@@ -74,6 +74,7 @@ class ProxyTileService : TileService() {
         sendBroadcast(intent)
 
         if (!isRunning) {
+            ProxyServiceState.setRunning(true)
             updateTileState(isRunning = true, isWorking = false)
         }
     }

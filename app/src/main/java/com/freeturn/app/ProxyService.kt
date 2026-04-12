@@ -60,6 +60,8 @@ class ProxyService : Service() {
 
     private lateinit var serviceScope: CoroutineScope
 
+    private val isStarted = AtomicBoolean(false)
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -70,7 +72,7 @@ class ProxyService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (ProxyServiceState.isRunning.value) return START_STICKY
+        if (isStarted.getAndSet(true)) return START_STICKY
 
         openAppIntent = packageManager.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
@@ -252,7 +254,7 @@ class ProxyService : Service() {
                     getString(R.string.error_process_no_output, exitCode)))
             }
 
-        } catch (e: InterruptedIOException) {
+        } catch (_: InterruptedIOException) {
             // pass
         } catch (e: Exception) {
             val msg = e.message ?: ""
@@ -379,6 +381,7 @@ class ProxyService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isStarted.set(false)
         userStopped.set(true)
         ProxyServiceState.setWorking(false)
         ProxyServiceState.setRunning(false)
