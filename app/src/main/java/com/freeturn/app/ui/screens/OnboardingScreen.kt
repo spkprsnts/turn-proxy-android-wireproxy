@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.res.painterResource
 import com.freeturn.app.R
@@ -132,8 +131,6 @@ fun OnboardingScreen(
                     shape = MaterialTheme.shapes.large,
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
-                    Icon(painterResource(R.drawable.wifi_24px), contentDescription = null)
-                    Spacer(Modifier.width(10.dp))
                     Text(stringResource(R.string.start), style = MaterialTheme.typography.labelLarge)
                 }
 
