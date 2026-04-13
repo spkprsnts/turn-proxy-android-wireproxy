@@ -91,6 +91,7 @@ import androidx.compose.ui.draw.shadow
 import android.content.ClipData
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.VpnKey
@@ -675,17 +676,27 @@ fun HomeScreen(
 
     if (showBottomSheet.value) {
         val sheetColor = MaterialTheme.colorScheme.surfaceContainerLow
+        val showRepoLinks = rememberSaveable { mutableStateOf(false) }
+
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet.value = false },
             sheetState = bottomSheetState,
             containerColor = sheetColor
         ) {
-            InfoBottomSheet(
-                viewModel = viewModel,
-                containerColor = sheetColor,
-                privacyMode = privacyMode,
-                onPrivacyModeChange = { viewModel.setPrivacyMode(it) }
-            )
+            if (showRepoLinks.value) {
+                RepoLinksContent(
+                    containerColor = sheetColor,
+                    onBack = { showRepoLinks.value = false }
+                )
+            } else {
+                InfoBottomSheet(
+                    viewModel = viewModel,
+                    containerColor = sheetColor,
+                    privacyMode = privacyMode,
+                    onPrivacyModeChange = { viewModel.setPrivacyMode(it) },
+                    onOpenRepoLinks = { showRepoLinks.value = true }
+                )
+            }
         }
     }
 
@@ -872,10 +883,10 @@ private fun InfoBottomSheet(
     viewModel: MainViewModel,
     containerColor: Color,
     privacyMode: Boolean,
-    onPrivacyModeChange: (Boolean) -> Unit
+    onPrivacyModeChange: (Boolean) -> Unit,
+    onOpenRepoLinks: () -> Unit
 ) {
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
@@ -893,63 +904,25 @@ private fun InfoBottomSheet(
             .fillMaxWidth()
             .navigationBarsPadding()
     ) {
-        // Ссылки
+        // Ссылки на репозитории
         item {
-            RepoLinkItem(
-                title = stringResource(R.string.android_client),
-                subtitle = "spkprsnts/turn-proxy-android-wireproxy",
-                url = "https://github.com/spkprsnts/turn-proxy-android-wireproxy",
-                containerColor = containerColor,
-                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
-                onOpen = { uriHandler.openUri(it) }
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.repo_links)) },
+                supportingContent = { Text(stringResource(R.string.repo_links_desc)) },
+                leadingContent = {
+                    Icon(
+                        painter = painterResource(R.drawable.open_in_new_24px),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                colors = listColors,
+                modifier = Modifier.clickable {
+                    HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                    onOpenRepoLinks()
+                }
             )
         }
-
-        item {
-            RepoLinkItem(
-                title = stringResource(R.string.android_client_original),
-                subtitle = "samosvalishe/turn-proxy-android",
-                url = "https://github.com/samosvalishe/turn-proxy-android",
-                containerColor = containerColor,
-                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
-                onOpen = { uriHandler.openUri(it) }
-            )
-        }
-
-        item {
-            RepoLinkItem(
-                title = stringResource(R.string.proxy_core),
-                subtitle = "cacggghp/vk-turn-proxy",
-                url = "https://github.com/cacggghp/vk-turn-proxy",
-                containerColor = containerColor,
-                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
-                onOpen = { uriHandler.openUri(it) }
-            )
-        }
-
-        item {
-            RepoLinkItem(
-                title = stringResource(R.string.proxy_core_use),
-                subtitle = "alxmcp/vk-turn-proxy",
-                url = "https://github.com/alxmcp/vk-turn-proxy",
-                containerColor = containerColor,
-                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
-                onOpen = { uriHandler.openUri(it) }
-            )
-        }
-
-        item {
-            RepoLinkItem(
-                title = stringResource(R.string.wireproxy),
-                subtitle = "windtf/wireproxy",
-                url = "https://github.com/windtf/wireproxy",
-                containerColor = containerColor,
-                onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
-                onOpen = { uriHandler.openUri(it) }
-            )
-        }
-
-        item { Spacer(Modifier.height(6.dp)) }
 
         item { HorizontalDivider() }
 
@@ -1105,6 +1078,110 @@ private fun InfoBottomSheet(
                 TextButton(onClick = { showResetDialog.value = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
+    }
+}
+
+@Composable
+private fun RepoLinksContent(
+    containerColor: Color,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.cancel)
+                )
+            }
+            Text(
+                text = stringResource(R.string.repo_links),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        LazyColumn {
+            item {
+                RepoLinkItem(
+                    title = stringResource(R.string.android_client),
+                    subtitle = "spkprsnts/turn-proxy-android-wireproxy",
+                    url = "https://github.com/spkprsnts/turn-proxy-android-wireproxy",
+                    containerColor = containerColor,
+                    onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                    onOpen = { uriHandler.openUri(it) }
+                )
+            }
+
+            item {
+                RepoLinkItem(
+                    title = stringResource(R.string.android_client_original),
+                    subtitle = "samosvalishe/turn-proxy-android",
+                    url = "https://github.com/samosvalishe/turn-proxy-android",
+                    containerColor = containerColor,
+                    onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                    onOpen = { uriHandler.openUri(it) }
+                )
+            }
+
+            item {
+                RepoLinkItem(
+                    title = stringResource(R.string.proxy_core),
+                    subtitle = "cacggghp/vk-turn-proxy",
+                    url = "https://github.com/cacggghp/vk-turn-proxy",
+                    containerColor = containerColor,
+                    onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                    onOpen = { uriHandler.openUri(it) }
+                )
+            }
+
+            item {
+                RepoLinkItem(
+                    title = stringResource(R.string.proxy_core_use),
+                    subtitle = "alxmcp/vk-turn-proxy",
+                    url = "https://github.com/alxmcp/vk-turn-proxy",
+                    containerColor = containerColor,
+                    onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                    onOpen = { uriHandler.openUri(it) }
+                )
+            }
+
+            item {
+                RepoLinkItem(
+                    title = stringResource(R.string.wireproxy),
+                    subtitle = "windtf/wireproxy",
+                    url = "https://github.com/windtf/wireproxy",
+                    containerColor = containerColor,
+                    onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                    onOpen = { uriHandler.openUri(it) }
+                )
+            }
+
+            item {
+                RepoLinkItem(
+                    title = stringResource(R.string.tun2socks),
+                    subtitle = "xjasonlyu/tun2socks",
+                    url = "https://github.com/xjasonlyu/tun2socks",
+                    containerColor = containerColor,
+                    onHaptic = { HapticUtil.perform(context, HapticUtil.Pattern.SELECTION) },
+                    onOpen = { uriHandler.openUri(it) }
+                )
+            }
+
+            item { Spacer(Modifier.height(16.dp)) }
+        }
     }
 }
 
