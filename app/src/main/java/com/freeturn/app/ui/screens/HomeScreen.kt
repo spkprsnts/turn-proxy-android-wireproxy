@@ -65,6 +65,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.VpnService
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
@@ -197,6 +198,14 @@ fun HomeScreen(
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val vpnLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.saveClientConfig(clientConfig.copy(wireproxyVpnMode = true))
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -230,7 +239,16 @@ fun HomeScreen(
                     when (proxyState) {
                         is ProxyState.Idle, is ProxyState.Error -> {
                             HapticUtil.perform(context, HapticUtil.Pattern.TOGGLE_ON)
-                            viewModel.startProxy()
+                            if (clientConfig.wireproxyVpnMode) {
+                                val intent = VpnService.prepare(context)
+                                if (intent != null) {
+                                    vpnLauncher.launch(intent)
+                                } else {
+                                    viewModel.startProxy()
+                                }
+                            } else {
+                                viewModel.startProxy()
+                            }
                         }
                         is ProxyState.Running, is ProxyState.Working, is ProxyState.CaptchaRequired -> {
                             HapticUtil.perform(context, HapticUtil.Pattern.TOGGLE_OFF)
@@ -502,12 +520,21 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
-                        Switch(checked = clientConfig.wireproxyVpnMode, onCheckedChange = {
+                        Switch(checked = clientConfig.wireproxyVpnMode, onCheckedChange = { enabled ->
                             HapticUtil.perform(
                                 context,
-                                if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF
+                                if (enabled) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF
                             )
-                            viewModel.saveClientConfig(clientConfig.copy(wireproxyVpnMode = it))
+                            if (enabled) {
+                                val intent = VpnService.prepare(context)
+                                if (intent != null) {
+                                    vpnLauncher.launch(intent)
+                                } else {
+                                    viewModel.saveClientConfig(clientConfig.copy(wireproxyVpnMode = true))
+                                }
+                            } else {
+                                viewModel.saveClientConfig(clientConfig.copy(wireproxyVpnMode = false))
+                            }
                         })
                     }
                     HorizontalDivider(
