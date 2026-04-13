@@ -1,5 +1,8 @@
 # FreeTurn — Android TURN Proxy
 
+> [!IMPORTANT]  
+> **Проект переехал в новый репозиторий: [https://github.com/spkprsnts/WireTurn](https://github.com/spkprsnts/WireTurn)**
+
 Android-клиент для [vk-turn-proxy](https://github.com/cacggghp/vk-turn-proxy) — проброс WireGuard/Hysteria-трафика через TURN-серверы.
 
 > **Disclaimer:** Проект предназначен исключительно для образовательных и исследовательских целей.
