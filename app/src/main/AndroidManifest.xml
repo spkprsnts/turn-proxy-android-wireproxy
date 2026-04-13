@@ -61,6 +61,20 @@
                 android:value="Maintaining a WireGuard tunnel via wireproxy for traffic routing." />
         </service>
 
+        <service
+            android:name=".Tun2SocksVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="specialUse"
+            tools:targetApi="34">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Maintaining a VPN tunnel via tun2socks to route system traffic through a SOCKS5 proxy." />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

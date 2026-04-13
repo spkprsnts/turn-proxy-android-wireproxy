@@ -27,7 +27,8 @@ data class ClientConfig(
     val vlessMode: Boolean = false,
     val telemostDc: Boolean = true,
     val forceTurnPort443: Boolean = false,
-    val wireproxyEnabled: Boolean = false
+    val wireproxyEnabled: Boolean = false,
+    val wireproxyVpnMode: Boolean = false
 ) {
     fun getValidationErrorResId(): Int? {
         return if (isRawMode) {
@@ -64,6 +65,17 @@ class AppPreferences(context: Context) {
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val WIREPROXY_ENABLED = booleanPreferencesKey("wireproxy_enabled")
+        val WIREPROXY_VPN_MODE = booleanPreferencesKey("wireproxy_vpn_mode")
+        val WIRE_PRIV_KEY = stringPreferencesKey("wire_priv_key")
+        val WIRE_ADDRESS = stringPreferencesKey("wire_address")
+        val WIRE_DNS = stringPreferencesKey("wire_dns")
+        val WIRE_MTU = stringPreferencesKey("wire_mtu")
+        val WIRE_PUB_KEY = stringPreferencesKey("wire_pub_key")
+        val WIRE_ENDPOINT = stringPreferencesKey("wire_endpoint")
+        val WIRE_ALLOWED_IPS = stringPreferencesKey("wire_allowed_ips")
+        val WIRE_KEEPALIVE = stringPreferencesKey("wire_keepalive")
+        val WIRE_HTTP_BIND = stringPreferencesKey("wire_http_bind")
+        val WIRE_SOCKS_BIND = stringPreferencesKey("wire_socks_bind")
         val VK_LINK_HISTORY = stringPreferencesKey("vk_link_history")
         val SERVER_ADDR_HISTORY = stringPreferencesKey("server_addr_history")
     }
@@ -84,7 +96,25 @@ class AppPreferences(context: Context) {
                 vlessMode = prefs[CLIENT_VLESS] ?: false,
                 telemostDc = prefs[CLIENT_TELEMOST_DC] ?: true,
                 forceTurnPort443 = prefs[CLIENT_FORCE_PORT_443] ?: false,
-                wireproxyEnabled = prefs[WIREPROXY_ENABLED] ?: false
+                wireproxyEnabled = prefs[WIREPROXY_ENABLED] ?: false,
+                wireproxyVpnMode = prefs[WIREPROXY_VPN_MODE] ?: false
+            )
+        }
+
+    val wgConfigFlow: Flow<WgConfig> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
+            WgConfig(
+                privateKey = prefs[WIRE_PRIV_KEY] ?: "",
+                address = prefs[WIRE_ADDRESS] ?: "",
+                dns = prefs[WIRE_DNS] ?: "",
+                mtu = prefs[WIRE_MTU] ?: "",
+                publicKey = prefs[WIRE_PUB_KEY] ?: "",
+                endpoint = prefs[WIRE_ENDPOINT] ?: "",
+                allowedIps = prefs[WIRE_ALLOWED_IPS] ?: "",
+                persistentKeepalive = prefs[WIRE_KEEPALIVE] ?: "",
+                httpBindAddress = prefs[WIRE_HTTP_BIND] ?: WgConfig.DEFAULT_HTTP_BIND_ADDRESS,
+                socks5BindAddress = prefs[WIRE_SOCKS_BIND] ?: WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS
             )
         }
 
@@ -167,6 +197,22 @@ class AppPreferences(context: Context) {
             prefs[CLIENT_TELEMOST_DC] = config.telemostDc
             prefs[CLIENT_FORCE_PORT_443] = config.forceTurnPort443
             prefs[WIREPROXY_ENABLED] = config.wireproxyEnabled
+            prefs[WIREPROXY_VPN_MODE] = config.wireproxyVpnMode
+        }
+    }
+
+    suspend fun saveWgConfig(config: WgConfig) {
+        context.dataStore.edit { prefs ->
+            prefs[WIRE_PRIV_KEY] = config.privateKey
+            prefs[WIRE_ADDRESS] = config.address
+            prefs[WIRE_DNS] = config.dns
+            prefs[WIRE_MTU] = config.mtu
+            prefs[WIRE_PUB_KEY] = config.publicKey
+            prefs[WIRE_ENDPOINT] = config.endpoint
+            prefs[WIRE_ALLOWED_IPS] = config.allowedIps
+            prefs[WIRE_KEEPALIVE] = config.persistentKeepalive
+            prefs[WIRE_HTTP_BIND] = config.httpBindAddress
+            prefs[WIRE_SOCKS_BIND] = config.socks5BindAddress
         }
     }
 

@@ -26,6 +26,7 @@
     <string name="wireproxy_idle">Остановлен</string>
     <string name="wireproxy_starting_state">Запускается</string>
     <string name="wireproxy_running_state">Запущен</string>
+    <string name="wireproxy_config_invalid">Некорректный конфиг</string>
     <string name="error_format_short">Ошибка: %1$s</string>
     <string name="android_client">Android-клиент</string>
     <string name="android_client_original">Android-клиент (оригинал)</string>
@@ -39,6 +40,10 @@
     <string name="reset_all_settings_title">Сбросить все настройки?</string>
     <string name="reset_all_settings_desc">Все настройки будут удалены, прокси остановлен. Приложение перезапустится.</string>
     <string name="cancel">Отмена</string>
+    <string name="vpn_mode">Режим VPN</string>
+    <string name="vpn_active">VPN активен</string>
+    <string name="vpn_stop">Выключить</string>
+    <string name="vpn_service_desc">Маршрутизация трафика через прокси для обхода ограничений</string>
 
     <!-- WireproxyConfigScreen -->
     <string name="wireproxy_title">Wireproxy</string>
@@ -172,6 +177,7 @@
     <string name="error_file_empty">Файл пустой</string>
     <string name="error_file_too_large">Файл слишком большой (максимум %1$d МБ)</string>
     <string name="log_custom_kernel_installed">Кастомное ядро установлено: %1$d КБ</string>
+    <string name="log_wireproxy_invalid_config">[Wireproxy] Некорректный или отсутствующий конфиг, запуск отменен</string>
     <string name="error_kernel_install_failed">Ошибка установки ядра: %1$s</string>
     <string name="log_custom_kernel_deleted">Кастомное ядро удалено, используется встроенное</string>
     <string name="error_update_url_not_found">URL обновления не найден</string>

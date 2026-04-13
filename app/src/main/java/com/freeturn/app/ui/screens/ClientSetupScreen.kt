@@ -124,7 +124,9 @@ fun ClientSetupScreen(
 
     // Авто-сохранение с дебаунсом 600 мс на каждое изменение поля.
     // vlessMode исключён — сохраняется через setVlessMode с автоперезапуском сервера.
-    LaunchedEffect(isRawMode, rawCommand, serverAddress, vkLink, threads, useUdp, noDtls, manualCaptcha, localPort, vlessMode, telemostDc, forcePort443) {
+    LaunchedEffect(isRawMode, rawCommand, serverAddress, vkLink, threads, useUdp, noDtls,
+        manualCaptcha, localPort, vlessMode, telemostDc, forcePort443
+    ) {
         delay(600)
         viewModel.saveClientConfig(
             ClientConfig(

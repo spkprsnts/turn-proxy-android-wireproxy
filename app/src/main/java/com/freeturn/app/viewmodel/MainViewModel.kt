@@ -13,6 +13,7 @@ import com.freeturn.app.WireproxyServiceState
 import com.freeturn.app.data.AppPreferences
 import com.freeturn.app.data.ClientConfig
 import com.freeturn.app.data.ThemeMode
+import com.freeturn.app.data.WgConfig
 import com.freeturn.app.domain.AppUpdater
 import com.freeturn.app.domain.LocalProxyManager
 import kotlinx.coroutines.Dispatchers
@@ -22,35 +23,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.Socket
 import kotlin.system.measureTimeMillis
-
-data class WgConfig(
-    val privateKey: String = "",
-    val address: String = "",
-    val dns: String = "",
-    val mtu: String = "",
-    val publicKey: String = "",
-    val endpoint: String = "",
-    val allowedIps: String = "",
-    val persistentKeepalive: String = "",
-    val httpBindAddress: String = DEFAULT_HTTP_BIND_ADDRESS,
-    val socks5BindAddress: String = DEFAULT_SOCKS5_BIND_ADDRESS
-) {
-    companion object {
-        const val DEFAULT_HTTP_BIND_ADDRESS = "127.0.0.1:8080"
-        const val DEFAULT_SOCKS5_BIND_ADDRESS = "127.0.0.1:2080"
-    }
-}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -78,10 +58,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _clientConfig = MutableStateFlow(ClientConfig())
     val clientConfig: StateFlow<ClientConfig> = _clientConfig.asStateFlow()
 
-    // WireGuard config (wg.conf)
-    private val _wgConfigText = MutableStateFlow("")
-    val wgConfigText: StateFlow<String> = _wgConfigText.asStateFlow()
-
     private val _wgConfig = MutableStateFlow(WgConfig())
     val wgConfig: StateFlow<WgConfig> = _wgConfig.asStateFlow()
 
@@ -94,12 +70,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var pingJob: Job? = null
 
+    sealed class PingResult {
+        object Loading : PingResult()
+        data class Success(val ms: Long) : PingResult()
+        object Error : PingResult()
+    }
+
     init {
-        loadWgConfig()
         viewModelScope.launch {
-            // Загружаем все критические настройки до завершения инициализации.
-            // Это предотвращает "мелькание" экранов (например, показ онбординга на долю секунды),
-            // так как при isInitialized = true все StateFlow уже будут иметь актуальные значения.
             val done = prefs.onboardingDoneFlow.first()
             val theme = prefs.themeModeFlow.first()
             val dynamic = prefs.dynamicThemeFlow.first()
@@ -112,41 +90,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             _isInitialized.value = true
 
-            // Фоновая проверка обновлений при запуске
             viewModelScope.launch {
-                delay(2000) // Небольшая задержка, чтобы не нагружать сеть сразу
+                delay(2000)
                 appUpdater.checkForUpdate(silent = true)
             }
 
-            // Запускаем фоновое обновление при изменении в DataStore
             launch { prefs.onboardingDoneFlow.collect { _onboardingDone.value = it } }
             launch { prefs.themeModeFlow.collect { _themeMode.value = it } }
             launch { prefs.dynamicThemeFlow.collect { _dynamicTheme.value = it } }
             launch { prefs.clientConfigFlow.collect { _clientConfig.value = it } }
+            launch { prefs.wgConfigFlow.collect { _wgConfig.value = it } }
         }
+        viewModelScope.launch { proxyManager.observeProxyLifecycle() }
+        viewModelScope.launch { proxyManager.observeProxyServiceStatus() }
+        viewModelScope.launch { proxyManager.observeCaptchaEvents() }
+        viewModelScope.launch { proxyManager.observeProxyServiceWorking() }
         viewModelScope.launch {
-            proxyManager.observeProxyLifecycle()
-        }
-        viewModelScope.launch {
-            proxyManager.observeProxyServiceStatus()
-        }
-        viewModelScope.launch {
-            proxyManager.observeCaptchaEvents()
-        }
-        viewModelScope.launch {
-            proxyManager.observeProxyServiceWorking()
-        }
-        viewModelScope.launch {
-            WireproxyServiceState.state
-                .map { it is WireproxyState.Running }
-                .distinctUntilChanged()
-                .collect { isRunning ->
-                    if (isRunning) {
-                        checkWireproxyPing()
-                    } else {
-                        _wireproxyPing.value = null
-                    }
+            WireproxyServiceState.state.collect { state ->
+                val isRunning = state is WireproxyState.Running
+                if (isRunning) {
+                    checkWireproxyPing()
                 }
+            }
         }
         proxyManager.syncInitialState()
     }
@@ -174,15 +139,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPrivacyMode(enabled: Boolean) { _privacyMode.value = enabled }
 
-    // Local proxy
     fun startProxy() {
         viewModelScope.launch {
-            if (clientConfig.value.wireproxyEnabled && !isValidHostPort(_wgConfig.value.socks5BindAddress)) {
-                updateWgConfig(_wgConfig.value.copy(socks5BindAddress = WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS))
-            }
-            prefs.addVkLinkToHistory(clientConfig.value.vkLink)
-            prefs.addServerAddressToHistory(clientConfig.value.serverAddress)
-            proxyManager.startProxy(clientConfig.value)
+            val cfg = clientConfig.value
+            prefs.addVkLinkToHistory(cfg.vkLink)
+            prefs.addServerAddressToHistory(cfg.serverAddress)
+            proxyManager.startProxy(cfg)
         }
     }
 
@@ -190,41 +152,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         proxyManager.stopProxy()
     }
 
-    fun startWireproxy() {
-        if (!isValidHostPort(_wgConfig.value.socks5BindAddress)) {
-            updateWgConfig(_wgConfig.value.copy(socks5BindAddress = WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS))
-        }
-        proxyManager.startWireproxy()
-    }
-
-    fun stopWireproxy() {
-        proxyManager.stopWireproxy()
-    }
-
-    fun dismissCaptcha() {
-        proxyManager.dismissCaptcha()
-    }
-
-    fun clearLogs() {
-        ProxyServiceState.clearLogs()
-    }
-
-    // Preferences
-    fun saveClientConfig(config: ClientConfig) {
-        viewModelScope.launch { prefs.saveClientConfig(config) }
-    }
-
-    fun removeVkLinkFromHistory(link: String) {
-        viewModelScope.launch { prefs.removeVkLinkFromHistory(link) }
-    }
-
-    fun removeServerAddressFromHistory(address: String) {
-        viewModelScope.launch { prefs.removeServerAddressFromHistory(address) }
-    }
-
-    fun setOnboardingDone() {
-        viewModelScope.launch { prefs.setOnboardingDone(true) }
-    }
+    fun dismissCaptcha() { proxyManager.dismissCaptcha() }
+    fun clearLogs() { ProxyServiceState.clearLogs() }
+    fun saveClientConfig(config: ClientConfig) { viewModelScope.launch { prefs.saveClientConfig(config) } }
+    fun removeVkLinkFromHistory(link: String) { viewModelScope.launch { prefs.removeVkLinkFromHistory(link) } }
+    fun removeServerAddressFromHistory(address: String) { viewModelScope.launch { prefs.removeServerAddressFromHistory(address) } }
+    fun setOnboardingDone() { viewModelScope.launch { prefs.setOnboardingDone(true) } }
 
     fun checkWireproxyPing() {
         val socksAddr = _wgConfig.value.socks5BindAddress
@@ -233,181 +166,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pingJob?.cancel()
         pingJob = viewModelScope.launch {
             _wireproxyPing.value = PingResult.Loading
-            
             repeat(5) { attempt ->
-                // Отменяем, если Wireproxy перестал работать
                 if (WireproxyServiceState.state.value != WireproxyState.Running) {
                     _wireproxyPing.value = null
                     return@launch
                 }
-
                 val result = withContext(Dispatchers.IO) {
                     try {
                         val parts = socksAddr.split(":")
-                        val proxyHost = parts[0]
-                        val proxyPort = parts[1].toInt()
-
-                        val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress(proxyHost, proxyPort))
+                        val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress(parts[0], parts[1].toInt()))
                         val time = measureTimeMillis {
-                            Socket(proxy).use { socket ->
-                                socket.connect(InetSocketAddress("1.1.1.1", 53), 2000)
-                            }
+                            Socket(proxy).use { it.connect(InetSocketAddress("1.1.1.1", 53), 2000) }
                         }
                         PingResult.Success(time)
-                    } catch (_: Exception) {
-                        null
-                    }
+                    } catch (_: Exception) { null }
                 }
-
                 if (result is PingResult.Success) {
                     _wireproxyPing.value = result
                     return@launch
                 }
-                
-                if (attempt < 2) delay(500) // Пауза перед следующей попыткой
+                if (attempt < 2) delay(500)
             }
-            
             _wireproxyPing.value = PingResult.Error
         }
     }
 
-    fun setCustomKernel(uri: Uri) {
-        viewModelScope.launch {
-            _kernelError.value = proxyManager.setCustomKernel(uri)
-        }
-    }
-
-    fun clearCustomKernel() {
-        proxyManager.clearCustomKernel()
-    }
-
-    fun clearKernelError() {
-        _kernelError.value = null
-    }
-
-    // App update
-    fun checkForUpdate() {
-        viewModelScope.launch { appUpdater.checkForUpdate(silent = false) }
-    }
-
-    fun downloadUpdate() {
-        viewModelScope.launch { appUpdater.downloadUpdate() }
-    }
-
-    fun installUpdate() {
-        appUpdater.installUpdate()
-    }
-
-    fun resetUpdateState() {
-        appUpdater.resetState()
-    }
-
-    private fun loadWgConfig() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val file = File(getApplication<Application>().filesDir, "wg.conf")
-            if (file.exists()) {
-                val text = file.readText()
-                _wgConfigText.value = text
-                _wgConfig.value = parseWgConfig(text)
-            }
-        }
-    }
+    fun setCustomKernel(uri: Uri) { viewModelScope.launch { _kernelError.value = proxyManager.setCustomKernel(uri) } }
+    fun clearCustomKernel() { proxyManager.clearCustomKernel() }
+    fun clearKernelError() { _kernelError.value = null }
+    fun checkForUpdate() { viewModelScope.launch { appUpdater.checkForUpdate(silent = false) } }
+    fun downloadUpdate() { viewModelScope.launch { appUpdater.downloadUpdate() } }
+    fun installUpdate() { appUpdater.installUpdate() }
+    fun resetUpdateState() { appUpdater.resetState() }
 
     fun updateWgConfig(config: WgConfig) {
         _wgConfig.value = config
-        val text = config.toWgString()
-        _wgConfigText.value = text
-        saveWgConfigInternal(text)
+        viewModelScope.launch {
+            prefs.saveWgConfig(config)
+        }
     }
 
     fun updateWgConfigText(text: String) {
-        _wgConfig.value = parseWgConfig(text)
-        val newText = _wgConfig.value.toWgString()
-        _wgConfigText.value = newText
-        saveWgConfigInternal(newText)
-    }
-
-    private fun saveWgConfigInternal(text: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val file = File(getApplication<Application>().filesDir, "wg.conf")
-            file.writeText(text)
+        val parsed = WgConfig.parse(text)
+        if (_wgConfig.value != parsed) {
+            _wgConfig.value = parsed
+            viewModelScope.launch {
+                prefs.saveWgConfig(parsed)
+            }
         }
     }
 
     private fun isValidHostPort(address: String): Boolean {
-        return try {
-            val parts = address.split(":")
-            if (parts.size != 2) return false
-            val host = parts[0]
-            val port = parts[1].toInt()
-            host.isNotBlank() && port in 1..65535
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun parseWgConfig(text: String): WgConfig {
-        var privateKey = ""; var address = ""; var dns = ""; var mtu = "1280"
-        var publicKey = ""; var endpoint = "127.0.0.1:9000"; var allowedIps = ""; var persistentKeepalive = "25"
-        var httpBindAddress = WgConfig.DEFAULT_HTTP_BIND_ADDRESS; var socks5BindAddress = WgConfig.DEFAULT_SOCKS5_BIND_ADDRESS
-
-        var currentSection = ""
-        text.lineSequence().forEach { line ->
-            val trimmed = line.trim()
-            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                currentSection = trimmed.substring(1, trimmed.length - 1).lowercase()
-            } else if (trimmed.contains("=")) {
-                val parts = trimmed.split("=", limit = 2)
-                val key = parts[0].trim().lowercase()
-                val value = parts[1].trim()
-                when (currentSection) {
-                    "interface" -> when (key) {
-                        "privatekey" -> privateKey = value
-                        "address" -> address = value
-                        "dns" -> dns = value
-                        "mtu" -> mtu = value
-                    }
-                    "peer" -> when (key) {
-                        "publickey" -> publicKey = value
-                        "endpoint" -> endpoint = value
-                        "allowedips" -> allowedIps = value
-                        "persistentkeepalive" -> persistentKeepalive = value
-                    }
-                    "http" -> if (key == "bindaddress") httpBindAddress = value
-                    "socks5" -> if (key == "bindaddress") socks5BindAddress = value
-                }
-            }
-        }
-        return WgConfig(privateKey, address, dns, mtu, publicKey, endpoint, allowedIps, persistentKeepalive, httpBindAddress, socks5BindAddress)
-    }
-
-    sealed class PingResult {
-        object Loading : PingResult()
-        data class Success(val ms: Long) : PingResult()
-        object Error : PingResult()
-    }
-
-    private fun WgConfig.toWgString(): String {
-        val sb = StringBuilder()
-        sb.append("[Interface]\n")
-        sb.append("PrivateKey = $privateKey\n")
-        sb.append("Address = $address\n")
-        if (dns.isNotBlank()) sb.append("DNS = $dns\n")
-        if (mtu.isNotBlank()) sb.append("MTU = $mtu\n")
-        sb.append("\n[Peer]\n")
-        sb.append("PublicKey = $publicKey\n")
-        sb.append("Endpoint = $endpoint\n")
-        sb.append("AllowedIPs = $allowedIps\n")
-        if (persistentKeepalive.isNotBlank()) sb.append("PersistentKeepalive = $persistentKeepalive\n")
-        if (httpBindAddress.isNotBlank()) {
-            sb.append("\n[http]\n")
-            sb.append("BindAddress = $httpBindAddress\n")
-        }
-        if (socks5BindAddress.isNotBlank()) {
-            sb.append("\n[Socks5]\n")
-            sb.append("BindAddress = $socks5BindAddress\n")
-        }
-        return sb.toString()
+        return com.freeturn.app.ui.ValidatorUtils.isValidHostPort(address)
     }
 
     fun resetAllSettings(context: Context) {
@@ -419,13 +229,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             prefs.resetAll()
             proxyManager.clearState()
             ProxyServiceState.clearLogs()
-            
-            // Delete wg.conf as well
-            val file = File(getApplication<Application>().filesDir, "wg.conf")
-            if (file.exists()) file.delete()
             _wgConfig.value = WgConfig()
-            _wgConfigText.value = ""
-
             val intent = (context as? android.app.Activity)?.intent
                 ?: Intent(context, com.freeturn.app.MainActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

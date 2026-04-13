@@ -4,9 +4,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -14,6 +16,7 @@ import android.os.Looper
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.freeturn.app.data.AppPreferences
+import com.freeturn.app.viewmodel.WireproxyState
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -22,13 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.regex.Pattern
 import kotlin.random.Random
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.InterruptedIOException
 
 sealed class StartupResult {
@@ -36,16 +35,7 @@ sealed class StartupResult {
     data class Failed(val message: String) : StartupResult()
 }
 
-class ProxyService : Service() {
-
-    companion object {
-        const val MAX_RESTARTS = 8
-        // Жёстко привязываемся к строке-объявлению капчи в бинарнике, чтобы
-        // случайные localhost-URL в других логах не открывали диалог.
-        private val CAPTCHA_URL_REGEX =
-            Pattern.compile("""Open this URL in your browser:\s*(https?://\S+)""")
-    }
-
+class ProxyService : Service() { 
     private var wakeLock: PowerManager.WakeLock? = null
     private var openAppIntent: PendingIntent? = null
 
@@ -56,6 +46,7 @@ class ProxyService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     @Volatile private var networkInitialized = false
+    private var lastNetworkHandle: Long = -1
     private var restartCount = 0
 
     private lateinit var serviceScope: CoroutineScope
@@ -67,8 +58,34 @@ class ProxyService : Service() {
     override fun onCreate() {
         super.onCreate()
         serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        val channel = NotificationChannel("ProxyChannel", "Proxy", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(CHANNEL_ID, "Proxy", NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        startSupervisor()
+    }
+
+    private fun startSupervisor() {
+        serviceScope.launch {
+            val prefs = AppPreferences(applicationContext)
+            combine(
+                ProxyServiceState.isRunning,
+                prefs.clientConfigFlow
+            ) { isRunning, cfg ->
+                isRunning && cfg.wireproxyEnabled
+            }.collect { shouldRunWireproxy ->
+                withContext(Dispatchers.Main) {
+                    if (shouldRunWireproxy) {
+                        if (WireproxyServiceState.state.value == WireproxyState.Idle) {
+                            val intent = Intent(this@ProxyService, WireproxyService::class.java)
+                            startForegroundService(intent)
+                        }
+                    } else {
+                        if (WireproxyServiceState.state.value != WireproxyState.Idle) {
+                            stopService(Intent(this@ProxyService, WireproxyService::class.java))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -77,14 +94,7 @@ class ProxyService : Service() {
         openAppIntent = packageManager.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
         }
-        val notification = NotificationCompat.Builder(this, "ProxyChannel")
-            .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.proxy_connecting))
-            .setSmallIcon(android.R.drawable.ic_menu_preferences)
-            .setOngoing(true)
-            .setContentIntent(openAppIntent)
-            .build()
-        startForeground(1, notification)
+        startForeground(NOTIFICATION_ID, createNotification(getString(R.string.proxy_connecting)))
 
         ProxyServiceState.setRunning(true)
         ProxyTileService.requestUpdate(this)
@@ -174,6 +184,11 @@ class ProxyService : Service() {
             }
             process.set(proc)
 
+            if (useCustom) {
+                ProxyServiceState.setWorking(true)
+                ProxyTileService.requestUpdate(this)
+            }
+
             BufferedReader(InputStreamReader(proc.inputStream)).use { reader ->
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
@@ -222,11 +237,11 @@ class ProxyService : Service() {
                         if (lower.contains("panic") || lower.contains("fatal") ||
                             lower.contains("rate limit")) {
                             ProxyServiceState.setStartupResult(StartupResult.Failed(l))
-                            updateNotification(getString(R.string.notification_title), getString(R.string.error_connecting))
+                            updateNotification(getString(R.string.error_connecting))
                             startupFailed = true
                         } else {
                             ProxyServiceState.setStartupResult(StartupResult.Success)
-                            updateNotification(getString(R.string.notification_title), getString(R.string.proxy_active))
+                            updateNotification(getString(R.string.proxy_active))
                         }
                         startupEmitted = true
                     }
@@ -276,7 +291,6 @@ class ProxyService : Service() {
                 startupFailed -> {
                     ProxyServiceState.addLog(getString(R.string.log_startup_failed_no_watchdog))
                     ProxyServiceState.setRunning(false)
-                    // Убираем proxyFailed.tryEmit, так как startProxy и так обработает StartupResult.Failed
                     stopSelf()
                 }
                 exitCode == 0 -> {
@@ -311,7 +325,7 @@ class ProxyService : Service() {
         val jitter = Random.nextLong(0, 500)
         val delay = baseDelay + jitter
         ProxyServiceState.addLog(getString(R.string.log_watchdog_restart, delay, restartCount, MAX_RESTARTS))
-        updateNotification(getString(R.string.notification_title), getString(R.string.notification_reconnecting, restartCount, MAX_RESTARTS))
+        updateNotification(getString(R.string.notification_reconnecting, restartCount, MAX_RESTARTS))
         handler.postDelayed({
             if (!userStopped.get()) serviceScope.launch { startBinaryProcess() }
         }, delay)
@@ -319,25 +333,36 @@ class ProxyService : Service() {
 
     // Network handover
 
-    private var networkDebounceJob: kotlinx.coroutines.Job? = null
+    private var networkDebounceJob: Job? = null
 
     private fun registerNetworkCallback() {
         networkInitialized = false
+        lastNetworkHandle = -1
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
+                val capabilities = cm.getNetworkCapabilities(network)
+                if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
+                    return
+                }
+
+                val handle = network.getNetworkHandle()
+                if (handle == lastNetworkHandle) {
+                    return
+                }
+                lastNetworkHandle = handle
+
                 if (!networkInitialized) {
                     networkInitialized = true
                     return
                 }
                 
-                // Дебаунс: отменяем предыдущий ждущий перезапуск, если он был
                 networkDebounceJob?.cancel()
                 networkDebounceJob = serviceScope.launch {
-                    kotlinx.coroutines.delay(2000)
+                    delay(2000)
                     if (!userStopped.get() && process.get() != null) {
                         ProxyServiceState.addLog(getString(R.string.log_network_change))
-                        updateNotification(getString(R.string.notification_title), getString(R.string.notification_network_change))
+                        updateNotification(getString(R.string.notification_network_change))
                         restartCount = 0
                         val p = process.get()
                         p?.destroyForcibly()
@@ -361,15 +386,17 @@ class ProxyService : Service() {
 
     // Notification
 
-    private fun updateNotification(title: String, text: String) {
-        val notification = NotificationCompat.Builder(this, "ProxyChannel")
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_menu_preferences)
-            .setOngoing(true)
-            .setContentIntent(openAppIntent)
-            .build()
-        getSystemService(NotificationManager::class.java).notify(1, notification)
+    private fun createNotification(text: String) = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setContentTitle(getString(R.string.notification_title))
+        .setContentText(text)
+        .setSmallIcon(android.R.drawable.ic_menu_preferences)
+        .setOngoing(true)
+        .setContentIntent(openAppIntent)
+        .build()
+
+    private fun updateNotification(text: String) {
+        val notification = createNotification(text)
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
     }
 
     // Helpers
@@ -385,6 +412,10 @@ class ProxyService : Service() {
         userStopped.set(true)
         ProxyServiceState.setWorking(false)
         ProxyServiceState.setRunning(false)
+
+        // Explicitly stop child service because the supervisor scope is about to be cancelled
+        stopService(Intent(this, WireproxyService::class.java))
+
         ProxyTileService.requestUpdate(this)
         handler.removeCallbacksAndMessages(null)
         unregisterNetworkCallback()
@@ -392,5 +423,33 @@ class ProxyService : Service() {
         process.get()?.destroyForcibly()
         serviceScope.cancel()
         if (wakeLock?.isHeld == true) wakeLock?.release()
+    }
+    
+    companion object {
+        private const val NOTIFICATION_ID = 1
+        private const val CHANNEL_ID = "ProxyChannel"
+        const val MAX_RESTARTS = 8
+        // Жёстко привязываемся к строке-объявлению капчи в бинарнике, чтобы
+        // случайные localhost-URL в других логах не открывали диалог.
+        private val CAPTCHA_URL_REGEX =
+            Pattern.compile("""Open this URL in your browser:\s*(https?://\S+)""")
+
+        fun start(context: Context, cfg: com.freeturn.app.data.ClientConfig) {
+            cfg.getValidationErrorResId()?.let { errorRes ->
+                ProxyServiceState.setStartupResult(StartupResult.Failed(context.getString(errorRes)))
+                return
+            }
+
+            ProxyServiceState.clearLogs()
+            ProxyServiceState.setStartupResult(null)
+
+            val serviceIntent = Intent(context, ProxyService::class.java)
+            context.startForegroundService(serviceIntent)
+        }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, ProxyService::class.java))
+            // Wireproxy and VPN will be stopped by supervisors because states will change
+        }
     }
 }

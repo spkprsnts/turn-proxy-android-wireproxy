@@ -1,11 +1,9 @@
 package com.freeturn.app.domain
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import com.freeturn.app.R
 import com.freeturn.app.ProxyService
-import com.freeturn.app.WireproxyService
 import com.freeturn.app.ProxyServiceState
 import com.freeturn.app.StartupResult
 import com.freeturn.app.data.ClientConfig
@@ -68,7 +66,7 @@ class LocalProxyManager(private val context: Context) {
                 // Сервис запущен внешним источником (например, ProxyReceiver)
                 updateStateAfterSuccess()
             } else if (!running && (_proxyState.value is ProxyState.Running || _proxyState.value is ProxyState.Working || _proxyState.value is ProxyState.CaptchaRequired)) {
-                context.stopService(Intent(context, WireproxyService::class.java))
+                ProxyService.stop(context)
                 _proxyState.value = ProxyState.Idle
             }
         }
@@ -114,28 +112,9 @@ class LocalProxyManager(private val context: Context) {
         if (ProxyServiceState.isRunning.value) return
         if (_proxyState.value is ProxyState.Error) _proxyState.value = ProxyState.Idle
 
-        if (!cfg.isRawMode && (cfg.serverAddress.isBlank() || cfg.vkLink.isBlank())) {
-            setErrorWithAutoReset(context.getString(R.string.error_settings_empty))
-            return
-        }
-        if (cfg.isRawMode && cfg.rawCommand.isBlank()) {
-            setErrorWithAutoReset(context.getString(R.string.error_raw_empty))
-            return
-        }
-
         _proxyState.value = ProxyState.Starting
 
-        ProxyServiceState.clearLogs()
-        ProxyServiceState.setStartupResult(null)
-        
-        // Start services
-        val intent = Intent(context, ProxyService::class.java)
-        context.startForegroundService(intent)
-
-        if (cfg.wireproxyEnabled) {
-            val wireproxyIntent = Intent(context, WireproxyService::class.java)
-            context.startForegroundService(wireproxyIntent)
-        }
+        ProxyService.start(context, cfg)
 
         val result = withTimeoutOrNull(5_000L) {
             ProxyServiceState.startupResult.filterNotNull().first()
@@ -145,11 +124,11 @@ class LocalProxyManager(private val context: Context) {
 
         when (result) {
             null -> {
-                stopProxy()
+                ProxyService.stop(context)
                 setErrorWithAutoReset(context.getString(R.string.error_proxy_not_started))
             }
             is StartupResult.Failed -> {
-                stopProxy()
+                ProxyService.stop(context)
                 setErrorWithAutoReset(result.message)
             }
             is StartupResult.Success -> {
@@ -159,18 +138,8 @@ class LocalProxyManager(private val context: Context) {
     }
 
     fun stopProxy() {
-        context.stopService(Intent(context, ProxyService::class.java))
-        stopWireproxy()
+        ProxyService.stop(context)
         _proxyState.value = ProxyState.Idle
-    }
-
-    fun startWireproxy() {
-        val wireproxyIntent = Intent(context, WireproxyService::class.java)
-        context.startForegroundService(wireproxyIntent)
-    }
-
-    fun stopWireproxy() {
-        context.stopService(Intent(context, WireproxyService::class.java))
     }
 
     fun dismissCaptcha() {

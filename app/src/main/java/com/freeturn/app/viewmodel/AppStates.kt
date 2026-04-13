@@ -7,6 +7,14 @@ sealed class WireproxyState {
     object Running : WireproxyState()
 }
 
+// VPN states
+sealed class VpnState {
+    object Idle : VpnState()
+    object Starting : VpnState()
+    object Running : VpnState()
+    data class Error(val message: String) : VpnState()
+}
+
 // Local proxy client states
 sealed class ProxyState {
     object Idle : ProxyState()

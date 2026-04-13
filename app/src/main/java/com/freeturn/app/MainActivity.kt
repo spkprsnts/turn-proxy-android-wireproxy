@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
             val isInitialized by viewModel.isInitialized.collectAsStateWithLifecycle()
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val dynamicTheme by viewModel.dynamicTheme.collectAsStateWithLifecycle()
-            
+
             FreeTurnTheme(themeMode = themeMode, dynamicColor = dynamicTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
