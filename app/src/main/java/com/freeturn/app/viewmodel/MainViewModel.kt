@@ -68,13 +68,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _wireproxyPing = MutableStateFlow<PingResult?>(null)
     val wireproxyPing: StateFlow<PingResult?> = _wireproxyPing.asStateFlow()
 
+    private val _wireproxyTransfer = MutableStateFlow<TransferResult?>(null)
+    val wireproxyTransfer: StateFlow<TransferResult?> = _wireproxyTransfer.asStateFlow()
+
+    private val _isHomeScreenActive = MutableStateFlow(false)
+
     private var pingJob: Job? = null
+    private var metricsJob: Job? = null
 
     sealed class PingResult {
         object Loading : PingResult()
         data class Success(val ms: Long) : PingResult()
         object Error : PingResult()
     }
+
+    data class TransferResult(val rx: Long, val tx: Long)
 
     init {
         viewModelScope.launch {
@@ -110,10 +118,67 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val isRunning = state is WireproxyState.Running
                 if (isRunning) {
                     checkWireproxyPing()
+                    startMetricsPoller()
+                } else {
+                    stopMetricsPoller()
                 }
             }
         }
         proxyManager.syncInitialState()
+    }
+
+    fun setHomeScreenActive(active: Boolean) {
+        _isHomeScreenActive.value = active
+    }
+
+    private fun startMetricsPoller() {
+        metricsJob?.cancel()
+        metricsJob = viewModelScope.launch {
+            while (true) {
+                if (_isHomeScreenActive.value) {
+                    val port = WireproxyServiceState.metricsPort.value
+                    if (port != null) {
+                        updateMetrics(port)
+                    }
+                }
+                delay(3000)
+            }
+        }
+    }
+
+    private fun stopMetricsPoller() {
+        metricsJob?.cancel()
+        metricsJob = null
+        _wireproxyTransfer.value = null
+    }
+
+    private suspend fun updateMetrics(port: Int) {
+        withContext(Dispatchers.IO) {
+            try {
+                val url = java.net.URL("http://127.0.0.1:$port/metrics")
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 2000
+                connection.readTimeout = 2000
+                val content = connection.inputStream.bufferedReader().use { it.readText() }
+                
+                var rx = 0L
+                var tx = 0L
+                
+                content.lines().forEach { line ->
+                    val trimmed = line.trim()
+                    if (trimmed.startsWith("#")) return@forEach
+                    
+                    if (trimmed.startsWith("rx_bytes")) {
+                        rx += trimmed.split("=").lastOrNull()?.toLongOrNull() ?: 0L
+                    } else if (trimmed.startsWith("tx_bytes")) {
+                        tx += trimmed.split("=").lastOrNull()?.toLongOrNull() ?: 0L
+                    }
+                }
+                _wireproxyTransfer.value = TransferResult(rx, tx)
+            } catch (_: Exception) {
+                // pass
+            }
+        }
     }
 
     override fun onCleared() {

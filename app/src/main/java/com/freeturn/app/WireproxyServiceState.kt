@@ -8,7 +8,14 @@ object WireproxyServiceState {
     private val _state = MutableStateFlow<WireproxyState>(WireproxyState.Idle)
     val state = _state.asStateFlow()
 
+    private val _metricsPort = MutableStateFlow<Int?>(null)
+    val metricsPort = _metricsPort.asStateFlow()
+
     fun updateStatus(newStatus: WireproxyState) {
         _state.value = newStatus
+    }
+
+    fun updateMetricsPort(port: Int?) {
+        _metricsPort.value = port
     }
 }

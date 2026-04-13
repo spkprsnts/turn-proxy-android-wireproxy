@@ -114,10 +114,19 @@ class WireproxyService : Service() {
                 configFile.writeText(wgConfig.toWgString())
             }
 
+            val randomPort = withContext(Dispatchers.IO) {
+                try {
+                    java.net.ServerSocket(0).use { it.localPort }
+                } catch (_: Exception) {
+                    (10000..60000).random()
+                }
+            }
+
             val cmdArgs = mutableListOf(
                 executable,
                 "--config", configFile.absolutePath,
-                "--silent"
+                "--silent",
+                "-i", "127.0.0.1:$randomPort"
             )
 
             ProxyServiceState.addLog("[Wireproxy] starting: ${cmdArgs.joinToString(" ")}")
@@ -127,11 +136,13 @@ class WireproxyService : Service() {
                     .start()
             }
             process.set(proc)
+            WireproxyServiceState.updateMetricsPort(randomPort)
             WireproxyServiceState.updateStatus(WireproxyState.Running)
 
             BufferedReader(InputStreamReader(proc.inputStream)).use { reader ->
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
+                    if (line?.contains("Health metric request") ?: false) continue
                     ProxyServiceState.addLog("[Wireproxy] $line")
                 }
             }
@@ -145,6 +156,7 @@ class WireproxyService : Service() {
             ProxyServiceState.addLog("[Wireproxy] Error: ${e.message}")
         } finally {
             process.set(null)
+            WireproxyServiceState.updateMetricsPort(null)
             WireproxyServiceState.updateStatus(WireproxyState.Idle)
             if (userStopped.get()) {
                 ProxyServiceState.addLog("[Wireproxy] stopped by user")
@@ -179,6 +191,7 @@ class WireproxyService : Service() {
         userStopped.set(true)
         handler.removeCallbacksAndMessages(null)
         process.get()?.destroyForcibly()
+        WireproxyServiceState.updateMetricsPort(null)
 
         // Explicitly stop child VPN service
         val stopIntent = Intent(this, Tun2SocksVpnService::class.java).apply {

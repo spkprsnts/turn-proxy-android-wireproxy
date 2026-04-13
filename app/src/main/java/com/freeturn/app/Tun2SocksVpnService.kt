@@ -25,6 +25,16 @@ class Tun2SocksVpnService : VpnService() {
     private var tunInterface: ParcelFileDescriptor? = null
     private val isStopping = java.util.concurrent.atomic.AtomicBoolean(false)
 
+    fun disableVpnMode() {
+        serviceScope.launch {
+            val prefs = AppPreferences(applicationContext)
+            val config = prefs.clientConfigFlow.first()
+            if (config.wireproxyVpnMode) {
+                prefs.saveClientConfig(config.copy(wireproxyVpnMode = false))
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         val channel = NotificationChannel(CHANNEL_ID, "Tun2Socks", NotificationManager.IMPORTANCE_LOW)
@@ -41,16 +51,8 @@ class Tun2SocksVpnService : VpnService() {
 
         if (action == ACTION_STOP_BY_USER) {
             isStopping.set(true)
-            serviceScope.launch {
-                val prefs = AppPreferences(applicationContext)
-                val config = prefs.clientConfigFlow.first()
-                if (config.wireproxyVpnMode) {
-                    prefs.saveClientConfig(config.copy(wireproxyVpnMode = false))
-                }
-                withContext(Dispatchers.Main) {
-                    stopVpn()
-                }
-            }
+            disableVpnMode()
+            stopVpn()
             return START_NOT_STICKY
         }
 
@@ -123,6 +125,7 @@ class Tun2SocksVpnService : VpnService() {
             tunInterface = builder.establish()
             if (tunInterface == null) {
                 ProxyServiceState.addLog("[VPN] Failed to establish TUN interface")
+                disableVpnMode()
                 stopSelf()
                 return
             }

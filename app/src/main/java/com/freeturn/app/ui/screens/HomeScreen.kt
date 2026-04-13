@@ -16,7 +16,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -89,7 +88,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import android.content.ClipData
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -129,14 +131,22 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                if (WireproxyServiceState.state.value == WireproxyState.Running) {
-                    viewModel.checkWireproxyPing()
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    viewModel.setHomeScreenActive(true)
+                    if (WireproxyServiceState.state.value == WireproxyState.Running) {
+                        viewModel.checkWireproxyPing()
+                    }
                 }
+                Lifecycle.Event.ON_PAUSE -> {
+                    viewModel.setHomeScreenActive(false)
+                }
+                else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            viewModel.setHomeScreenActive(false)
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
@@ -253,6 +263,7 @@ fun HomeScreen(
             )
 
             val wireproxyPing by viewModel.wireproxyPing.collectAsStateWithLifecycle()
+            val wireproxyTransfer by viewModel.wireproxyTransfer.collectAsStateWithLifecycle()
             val wgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
             
             Spacer(Modifier.height(10.dp))
@@ -262,75 +273,121 @@ fun HomeScreen(
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Column (
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Surface(
-                        onClick = {
-                            HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
-                            viewModel.checkWireproxyPing()
-                        },
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        border = null
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        Surface(
+                            onClick = {
+                                HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
+                                viewModel.checkWireproxyPing()
+                            },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            border = null
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.wifi_24px),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .offset(y = (-0.5).dp)
-                            )
-                            Box(
-                                modifier = Modifier.widthIn(min = 48.dp),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                when (val ping = wireproxyPing) {
-                                    is MainViewModel.PingResult.Loading -> {
-                                        CircularWavyProgressIndicator(
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
+                                Icon(
+                                    painter = painterResource(R.drawable.wifi_24px),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .offset(y = (-0.5).dp)
+                                )
+                                Box(
+                                    modifier = Modifier.widthIn(min = 48.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    when (val ping = wireproxyPing) {
+                                        is MainViewModel.PingResult.Loading -> {
+                                            CircularWavyProgressIndicator(
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
 
-                                    is MainViewModel.PingResult.Success -> {
-                                        Text(
-                                            text = stringResource(R.string.ping_ms, ping.ms),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = when {
-                                                ping.ms < 100 -> Color(0xFF4CAF50)
-                                                ping.ms < 300 -> Color(0xFFFFC107)
-                                                else -> Color(0xFFF44336)
-                                            },
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                                        is MainViewModel.PingResult.Success -> {
+                                            Text(
+                                                text = stringResource(R.string.ping_ms, ping.ms),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = when {
+                                                    ping.ms < 100 -> Color(0xFF4CAF50)
+                                                    ping.ms < 300 -> Color(0xFFFFC107)
+                                                    else -> Color(0xFFF44336)
+                                                },
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
 
-                                    is MainViewModel.PingResult.Error -> {
-                                        Text(
-                                            text = stringResource(R.string.ping_error),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    }
+                                        is MainViewModel.PingResult.Error -> {
+                                            Text(
+                                                text = stringResource(R.string.ping_error),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
 
-                                    null -> {
-                                        Text(
-                                            text = "?",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
+                                        null -> {
+                                            Text(
+                                                text = "?",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // peer receive/sent
+                    Spacer(Modifier.height(5.dp))
+                    Row (
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val transfer = wireproxyTransfer
+                        Row (
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDownward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = formatBytes(transfer?.rx ?: 0L),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Row (
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowUpward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = formatBytes(transfer?.tx ?: 0L),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -1131,6 +1188,14 @@ private fun RepoLinkItem(
     }
 }
 
+
+private fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    if (bytes < 1024) return "$bytes B"
+    val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt()
+    val pre = "KMGTPE"[exp - 1]
+    return String.format(java.util.Locale.US, "%.1f %siB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
+}
 
 @Composable
 internal fun String.redact(enabled: Boolean): String {
