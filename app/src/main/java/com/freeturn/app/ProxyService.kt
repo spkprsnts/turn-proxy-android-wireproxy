@@ -108,15 +108,17 @@ class ProxyService : Service() {
         registerNetworkCallback()
 
         ProxyServiceState.addLog(getString(R.string.log_proxy_start))
-        serviceScope.launch { startBinaryProcess() }
+        serviceScope.launch {
+            val cfg = AppPreferences(applicationContext).clientConfigFlow.first()
+            ProxyServiceState.setRunningConfig(cfg)
+            startBinaryProcess(cfg)
+        }
 
         return START_STICKY
     }
 
-    private suspend fun startBinaryProcess() {
+    private suspend fun startBinaryProcess(cfg: com.freeturn.app.data.ClientConfig) {
         if (userStopped.get()) return
-
-        val cfg = AppPreferences(applicationContext).clientConfigFlow.first()
 
         val customBin = File(filesDir, "custom_vkturn")
         val useCustom = customBin.exists()
@@ -327,7 +329,11 @@ class ProxyService : Service() {
         ProxyServiceState.addLog(getString(R.string.log_watchdog_restart, delay, restartCount, MAX_RESTARTS))
         updateNotification(getString(R.string.notification_reconnecting, restartCount, MAX_RESTARTS))
         handler.postDelayed({
-            if (!userStopped.get()) serviceScope.launch { startBinaryProcess() }
+            if (!userStopped.get()) serviceScope.launch { 
+                val cfg = AppPreferences(applicationContext).clientConfigFlow.first()
+                ProxyServiceState.setRunningConfig(cfg)
+                startBinaryProcess(cfg) 
+            }
         }, delay)
     }
 

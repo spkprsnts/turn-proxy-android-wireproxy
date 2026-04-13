@@ -110,6 +110,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.freeturn.app.ui.InlineConfigIndicator
 import com.freeturn.app.ui.HapticUtil
 import com.freeturn.app.viewmodel.MainViewModel
 import com.freeturn.app.viewmodel.ProxyState
@@ -284,7 +285,8 @@ fun HomeScreen(
             val wireproxyPing by viewModel.wireproxyPing.collectAsStateWithLifecycle()
             val wireproxyTransfer by viewModel.wireproxyTransfer.collectAsStateWithLifecycle()
             val wgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
-            
+            val runningWgConfig by WireproxyServiceState.runningConfig.collectAsStateWithLifecycle()
+
             Spacer(Modifier.height(10.dp))
             
             AnimatedVisibility(
@@ -555,6 +557,7 @@ fun HomeScreen(
                                 ProxyCopyRow(
                                     label = stringResource(R.string.wireproxy_http),
                                     address = wgConfig.httpBindAddress,
+                                    isModified = runningWgConfig != null && wgConfig.httpBindAddress != runningWgConfig?.httpBindAddress,
                                     onCopy = {
                                         HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
                                         scope.launch {
@@ -572,6 +575,7 @@ fun HomeScreen(
                                 ProxyCopyRow(
                                     label = stringResource(R.string.wireproxy_socks5),
                                     address = wgConfig.socks5BindAddress,
+                                    isModified = runningWgConfig != null && wgConfig.socks5BindAddress != runningWgConfig?.socks5BindAddress,
                                     onCopy = {
                                         HapticUtil.perform(context, HapticUtil.Pattern.CLICK)
                                         scope.launch {
@@ -1326,6 +1330,7 @@ private fun ConfigRow(label: String, value: String) {
 private fun ProxyCopyRow(
     label: String,
     address: String,
+    isModified: Boolean = false,
     onCopy: (String) -> Unit
 ) {
     Row(
@@ -1337,11 +1342,14 @@ private fun ProxyCopyRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                InlineConfigIndicator(isModified)
+            }
             Text(
                 address,
                 style = MaterialTheme.typography.bodyMedium,

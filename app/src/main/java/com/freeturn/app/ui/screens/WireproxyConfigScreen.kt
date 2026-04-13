@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.R
 import com.freeturn.app.data.WgConfig
+import com.freeturn.app.ui.ConfigFieldIndicator
 import com.freeturn.app.ui.HapticUtil
 import com.freeturn.app.ui.ValidatorUtils
 import com.freeturn.app.viewmodel.MainViewModel
@@ -46,6 +47,7 @@ fun WireproxyConfigScreen(
     val privacyMode by viewModel.privacyMode.collectAsStateWithLifecycle()
     val savedWgConfig by viewModel.wgConfig.collectAsStateWithLifecycle()
     val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
+    val runningConfig by com.freeturn.app.WireproxyServiceState.runningConfig.collectAsStateWithLifecycle()
 
     // Local states for auto-save logic
     var privateKey by rememberSaveable(savedWgConfig.privateKey) { mutableStateOf(savedWgConfig.privateKey) }
@@ -207,7 +209,10 @@ fun WireproxyConfigScreen(
                 label = { Text(stringResource(R.string.wireproxy_socks5)) },
                 isError = !isSocksValid || socks5BindAddress == httpBindAddress || socks5BindAddress.isBlank(),
                 placeholder = { Text(stringResource(R.string.wireproxy_socks5_placeholder)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && socks5BindAddress != runningConfig?.socks5BindAddress)
+                }
             )
 
             OutlinedTextField(
@@ -216,7 +221,10 @@ fun WireproxyConfigScreen(
                 label = { Text(stringResource(R.string.wireproxy_http)) },
                 isError = !isHttpValid || socks5BindAddress == httpBindAddress,
                 placeholder = { Text(stringResource(R.string.wireproxy_http_placeholder)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && httpBindAddress != runningConfig?.httpBindAddress)
+                }
             )
 
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
@@ -232,7 +240,10 @@ fun WireproxyConfigScreen(
                 isError = privateKey.isBlank(),
                 placeholder = { Text(stringResource(R.string.wireproxy_private_key_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
-                readOnly = privacyMode
+                readOnly = privacyMode,
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && privateKey != runningConfig?.privateKey)
+                }
             )
 
             OutlinedTextField(
@@ -242,7 +253,10 @@ fun WireproxyConfigScreen(
                 isError = address.isBlank(),
                 placeholder = { Text(stringResource(R.string.wireproxy_address_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
-                readOnly = privacyMode
+                readOnly = privacyMode,
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && address != runningConfig?.address)
+                }
             )
 
             OutlinedTextField(
@@ -250,7 +264,10 @@ fun WireproxyConfigScreen(
                 onValueChange = { dns = it },
                 label = { Text(stringResource(R.string.wireproxy_dns)) },
                 placeholder = { Text(stringResource(R.string.wireproxy_dns_placeholder)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && dns != runningConfig?.dns)
+                }
             )
 
             OutlinedTextField(
@@ -270,7 +287,10 @@ fun WireproxyConfigScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && mtu != runningConfig?.mtu)
+                }
             )
 
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
@@ -283,7 +303,10 @@ fun WireproxyConfigScreen(
                 isError = publicKey.isBlank(),
                 placeholder = { Text(stringResource(R.string.wireproxy_public_key_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
-                readOnly = privacyMode
+                readOnly = privacyMode,
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && publicKey != runningConfig?.publicKey)
+                }
             )
 
             OutlinedTextField(
@@ -315,7 +338,10 @@ fun WireproxyConfigScreen(
                     }
                 },
                 placeholder = { Text(stringResource(R.string.wireproxy_endpoint_placeholder)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && endpoint != runningConfig?.endpoint)
+                }
             )
 
             OutlinedTextField(
@@ -323,7 +349,10 @@ fun WireproxyConfigScreen(
                 onValueChange = { allowedIps = it },
                 label = { Text(stringResource(R.string.wireproxy_allowed_ips)) },
                 placeholder = { Text(stringResource(R.string.wireproxy_allowed_ips_placeholder)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && allowedIps != runningConfig?.allowedIps)
+                }
             )
 
             OutlinedTextField(
@@ -332,7 +361,10 @@ fun WireproxyConfigScreen(
                 label = { Text(stringResource(R.string.wireproxy_persistent_keepalive)) },
                 placeholder = { Text(stringResource(R.string.wireproxy_persistent_keepalive_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                trailingIcon = {
+                    ConfigFieldIndicator(runningConfig != null && persistentKeepalive != runningConfig?.persistentKeepalive)
+                }
             )
 
             if (showFinishButton && onFinish != null) {

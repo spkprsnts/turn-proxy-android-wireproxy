@@ -108,6 +108,7 @@ class WireproxyService : Service() {
             }
 
             val wgConfig = rawConfig.fillDefaults()
+            WireproxyServiceState.setRunningConfig(wgConfig)
             prefs.saveWgConfig(wgConfig)
             
             withContext(Dispatchers.IO) {

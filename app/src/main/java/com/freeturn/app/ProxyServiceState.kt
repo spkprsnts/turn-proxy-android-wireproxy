@@ -38,8 +38,18 @@ object ProxyServiceState {
     private val _captchaSession = MutableStateFlow<CaptchaSession?>(null)
     val captchaSession: StateFlow<CaptchaSession?> = _captchaSession.asStateFlow()
 
+    private val _runningConfig = MutableStateFlow<com.freeturn.app.data.ClientConfig?>(null)
+    val runningConfig: StateFlow<com.freeturn.app.data.ClientConfig?> = _runningConfig.asStateFlow()
+
     fun setRunning(value: Boolean) {
         _isRunning.value = value
+        if (!value) {
+            _runningConfig.value = null
+        }
+    }
+
+    fun setRunningConfig(config: com.freeturn.app.data.ClientConfig?) {
+        _runningConfig.value = config
     }
 
     fun setStartupResult(result: StartupResult?) {

@@ -68,6 +68,8 @@ import androidx.compose.ui.unit.dp
 import com.freeturn.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.data.ClientConfig
+import com.freeturn.app.ui.ConfigFieldIndicator
+import com.freeturn.app.ui.InlineConfigIndicator
 import com.freeturn.app.ui.HapticUtil
 import com.freeturn.app.ui.ValidatorUtils
 import com.freeturn.app.viewmodel.MainViewModel
@@ -75,11 +77,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/**
- * @param showFinishButton  true — онбординг-флоу, показываем кнопку «Завершить».
- *                          false — вкладка, авто-сохранение без кнопки.
- * @param onFinish  вызывается после нажатия кнопки «Завершить» (только если showFinishButton=true).
- */
 @Composable
 fun ClientSetupScreen(
     viewModel: MainViewModel,
@@ -93,6 +90,7 @@ fun ClientSetupScreen(
 
     val vkLinkHistory by viewModel.vkLinkHistory.collectAsStateWithLifecycle()
     val serverAddressHistory by viewModel.serverAddressHistory.collectAsStateWithLifecycle()
+    val runningConfig by com.freeturn.app.ProxyServiceState.runningConfig.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -174,7 +172,10 @@ fun ClientSetupScreen(
                     onValueChange = { rawCommand = it },
                     isError = rawCommand.isBlank(),
                     label = { Text(stringResource(R.string.raw_label)) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        ConfigFieldIndicator(runningConfig != null && (rawCommand != runningConfig?.rawCommand || !runningConfig!!.isRawMode))
+                    }
                 )
             } else {
                 var showServerHistoryMenu by remember { mutableStateOf(false) }
@@ -190,63 +191,67 @@ fun ClientSetupScreen(
                     readOnly = privacyMode,
                     supportingText = { Text(stringResource(R.string.server_address_support)) },
                     trailingIcon = {
-                        Box {
-                            IconButton(onClick = { showServerHistoryMenu = true }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.database_outlined_24px),
-                                    contentDescription = stringResource(R.string.history_label)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showServerHistoryMenu,
-                                onDismissRequest = { showServerHistoryMenu = false }
-                            ) {
-                                if (serverAddressHistory.isEmpty()) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.history_empty)) },
-                                        onClick = { showServerHistoryMenu = false },
-                                        enabled = false
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ConfigFieldIndicator(runningConfig != null && (serverAddress.trim() != runningConfig?.serverAddress || runningConfig!!.isRawMode))
+                            Box {
+                                IconButton(onClick = { showServerHistoryMenu = true }) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.database_outlined_24px),
+                                        contentDescription = stringResource(R.string.history_label)
                                     )
-                                } else {
-                                    serverAddressHistory.forEach { historyItem ->
+                                }
+                                DropdownMenu(
+                                    expanded = showServerHistoryMenu,
+                                    onDismissRequest = { showServerHistoryMenu = false }
+                                )
+                                {
+                                    if (serverAddressHistory.isEmpty()) {
                                         DropdownMenuItem(
-                                            modifier = Modifier.pointerInput(historyItem) {
-                                                awaitEachGesture {
-                                                    awaitFirstDown(requireUnconsumed = false)
-                                                    var isLongPress = false
-                                                    val job = scope.launch {
-                                                        delay(1500)
-                                                        HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
-                                                        delay(1500)
-                                                        isLongPress = true
-                                                        HapticUtil.perform(context, HapticUtil.Pattern.ERROR)
-                                                        viewModel.removeServerAddressFromHistory(historyItem)
-                                                    }
-                                                    val up = waitForUpOrCancellation()
-                                                    job.cancel()
-                                                    if (isLongPress) {
-                                                        up?.consume()
-                                                    }
-                                                }
-                                            },
-                                            text = {
-                                                val text = historyItem.redact(privacyMode)
-                                                Text(
-                                                    text = if (text.length > 30) {
-                                                        text.take(21) + "..." + text.takeLast(6)
-                                                    } else {
-                                                        text
-                                                    },
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Visible
-                                                )
-                                            },
-                                            onClick = {
-                                                HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
-                                                serverAddress = historyItem
-                                                showServerHistoryMenu = false
-                                            }
+                                            text = { Text(stringResource(R.string.history_empty)) },
+                                            onClick = { showServerHistoryMenu = false },
+                                            enabled = false
                                         )
+                                    } else {
+                                        serverAddressHistory.forEach { historyItem ->
+                                            DropdownMenuItem(
+                                                modifier = Modifier.pointerInput(historyItem) {
+                                                    awaitEachGesture {
+                                                        awaitFirstDown(requireUnconsumed = false)
+                                                        var isLongPress = false
+                                                        val job = scope.launch {
+                                                            delay(1500)
+                                                            HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                            delay(1500)
+                                                            isLongPress = true
+                                                            HapticUtil.perform(context, HapticUtil.Pattern.ERROR)
+                                                            viewModel.removeServerAddressFromHistory(historyItem)
+                                                        }
+                                                        val up = waitForUpOrCancellation()
+                                                        job.cancel()
+                                                        if (isLongPress) {
+                                                            up?.consume()
+                                                        }
+                                                    }
+                                                },
+                                                text = {
+                                                    val text = historyItem.redact(privacyMode)
+                                                    Text(
+                                                        text = if (text.length > 30) {
+                                                            text.take(21) + "..." + text.takeLast(6)
+                                                        } else {
+                                                            text
+                                                        },
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Visible
+                                                    )
+                                                },
+                                                onClick = {
+                                                    HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                    serverAddress = historyItem
+                                                    showServerHistoryMenu = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -267,63 +272,66 @@ fun ClientSetupScreen(
                     readOnly = privacyMode,
                     supportingText = { Text(stringResource(R.string.vk_link_support)) },
                     trailingIcon = {
-                        Box {
-                            IconButton(onClick = { showHistoryMenu = true }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.database_outlined_24px),
-                                    contentDescription = stringResource(R.string.history_label)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showHistoryMenu,
-                                onDismissRequest = { showHistoryMenu = false }
-                            ) {
-                                if (vkLinkHistory.isEmpty()) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.history_empty)) },
-                                        onClick = { showHistoryMenu = false },
-                                        enabled = false
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ConfigFieldIndicator(runningConfig != null && (vkLink.trim() != runningConfig?.vkLink || runningConfig!!.isRawMode))
+                            Box {
+                                IconButton(onClick = { showHistoryMenu = true }) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.database_outlined_24px),
+                                        contentDescription = stringResource(R.string.history_label)
                                     )
-                                } else {
-                                    vkLinkHistory.forEach { historyItem ->
+                                }
+                                DropdownMenu(
+                                    expanded = showHistoryMenu,
+                                    onDismissRequest = { showHistoryMenu = false }
+                                ) {
+                                    if (vkLinkHistory.isEmpty()) {
                                         DropdownMenuItem(
-                                            modifier = Modifier.pointerInput(historyItem) {
-                                                awaitEachGesture {
-                                                    awaitFirstDown(requireUnconsumed = false)
-                                                    var isLongPress = false
-                                                    val job = scope.launch {
-                                                        delay(1500)
-                                                        HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
-                                                        delay(1500)
-                                                        isLongPress = true
-                                                        HapticUtil.perform(context, HapticUtil.Pattern.ERROR)
-                                                        viewModel.removeVkLinkFromHistory(historyItem)
-                                                    }
-                                                    val up = waitForUpOrCancellation()
-                                                    job.cancel()
-                                                    if (isLongPress) {
-                                                        up?.consume()
-                                                    }
-                                                }
-                                            },
-                                            text = { 
-                                                val text = historyItem.redact(privacyMode)
-                                                Text(
-                                                    text = if (text.length > 30) {
-                                                        text.take(21) + "..." + text.takeLast(6)
-                                                    } else {
-                                                        text
-                                                    },
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Visible
-                                                ) 
-                                            },
-                                            onClick = {
-                                                HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
-                                                vkLink = historyItem
-                                                showHistoryMenu = false
-                                            }
+                                            text = { Text(stringResource(R.string.history_empty)) },
+                                            onClick = { showHistoryMenu = false },
+                                            enabled = false
                                         )
+                                    } else {
+                                        vkLinkHistory.forEach { historyItem ->
+                                            DropdownMenuItem(
+                                                modifier = Modifier.pointerInput(historyItem) {
+                                                    awaitEachGesture {
+                                                        awaitFirstDown(requireUnconsumed = false)
+                                                        var isLongPress = false
+                                                        val job = scope.launch {
+                                                            delay(1500)
+                                                            HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                            delay(1500)
+                                                            isLongPress = true
+                                                            HapticUtil.perform(context, HapticUtil.Pattern.ERROR)
+                                                            viewModel.removeVkLinkFromHistory(historyItem)
+                                                        }
+                                                        val up = waitForUpOrCancellation()
+                                                        job.cancel()
+                                                        if (isLongPress) {
+                                                            up?.consume()
+                                                        }
+                                                    }
+                                                },
+                                                text = {
+                                                    val text = historyItem.redact(privacyMode)
+                                                    Text(
+                                                        text = if (text.length > 30) {
+                                                            text.take(21) + "..." + text.takeLast(6)
+                                                        } else {
+                                                            text
+                                                        },
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Visible
+                                                    )
+                                                },
+                                                onClick = {
+                                                    HapticUtil.perform(context, HapticUtil.Pattern.SELECTION)
+                                                    vkLink = historyItem
+                                                    showHistoryMenu = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -346,7 +354,8 @@ fun ClientSetupScreen(
                                 if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF
                             )
                             telemostDc = it
-                        }
+                        },
+                        isModified = runningConfig != null && telemostDc != runningConfig?.telemostDc
                     )
                 }
 
@@ -359,7 +368,10 @@ fun ClientSetupScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     readOnly = privacyMode,
-                    supportingText = { Text(stringResource(R.string.local_listen_support)) }
+                    supportingText = { Text(stringResource(R.string.local_listen_support)) },
+                    trailingIcon = {
+                        ConfigFieldIndicator(runningConfig != null && localPort.trim() != runningConfig?.localPort)
+                    }
                 )
 
                 HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
@@ -373,7 +385,10 @@ fun ClientSetupScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(stringResource(R.string.threads_format, threads.roundToInt()), style = MaterialTheme.typography.bodyMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(stringResource(R.string.threads_format, threads.roundToInt()), style = MaterialTheme.typography.bodyMedium)
+                                InlineConfigIndicator(runningConfig != null && threads.roundToInt() != runningConfig?.threads)
+                            }
                             Text(
                                 stringResource(R.string.threads_recommendation),
                                 style = MaterialTheme.typography.labelSmall,
@@ -407,7 +422,8 @@ fun ClientSetupScreen(
                             if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF
                         )
                         vlessMode = it
-                    }
+                    },
+                    isModified = runningConfig != null && vlessMode != runningConfig?.vlessMode
                 )
 
                 if (!vlessMode) {
@@ -415,7 +431,10 @@ fun ClientSetupScreen(
                         Column(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(stringResource(R.string.transport_protocol), style = MaterialTheme.typography.bodyMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(stringResource(R.string.transport_protocol), style = MaterialTheme.typography.bodyMedium)
+                                InlineConfigIndicator(runningConfig != null && useUdp != runningConfig?.useUdp)
+                            }
                             Text(
                                 stringResource(R.string.transport_protocol_desc),
                                 style = MaterialTheme.typography.labelSmall,
@@ -451,7 +470,8 @@ fun ClientSetupScreen(
                             onCheckedChange = {
                                 HapticUtil.perform(context, if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF)
                                 noDtls = it
-                            }
+                            },
+                            isModified = runningConfig != null && noDtls != runningConfig?.noDtls
                         )
                     }
                 }
@@ -463,7 +483,8 @@ fun ClientSetupScreen(
                     onCheckedChange = {
                         HapticUtil.perform(context, if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF)
                         manualCaptcha = it
-                    }
+                    },
+                    isModified = runningConfig != null && manualCaptcha != runningConfig?.manualCaptcha
                 )
 
                 SwitchRow(
@@ -473,7 +494,8 @@ fun ClientSetupScreen(
                     onCheckedChange = {
                         HapticUtil.perform(context, if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF)
                         forcePort443 = it
-                    }
+                    },
+                    isModified = runningConfig != null && forcePort443 != runningConfig?.forceTurnPort443
                 )
             }
 
@@ -483,7 +505,8 @@ fun ClientSetupScreen(
                 label = stringResource(R.string.raw_mode),
                 description = stringResource(R.string.raw_mode_desc),
                 checked = isRawMode,
-                onCheckedChange = { isRawMode = it }
+                onCheckedChange = { isRawMode = it },
+                isModified = runningConfig != null && isRawMode != runningConfig?.isRawMode
             )
 
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
@@ -604,7 +627,8 @@ private fun SwitchRow(
     label: String,
     description: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    isModified: Boolean = false
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -612,7 +636,10 @@ private fun SwitchRow(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+                InlineConfigIndicator(isModified)
+            }
             Text(
                 description,
                 style = MaterialTheme.typography.labelSmall,
