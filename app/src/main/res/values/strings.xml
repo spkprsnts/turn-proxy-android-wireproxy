@@ -10,7 +10,7 @@
     <string name="proxy_starting">Запускается…</string>
     <string name="proxy_connecting">Подключение…</string>
     <string name="proxy_press_to_start">Нажмите для запуска</string>
-    <string name="current_settings">Текущие настройки</string>
+    <string name="current_client_settings">Текущие настройки клиента</string>
     <string name="call_link">Ссылка</string>
     <string name="server">Сервер</string>
     <string name="threads">Потоки</string>

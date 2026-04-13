@@ -597,7 +597,7 @@ fun HomeScreen(
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(stringResource(R.string.current_settings), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.current_client_settings), style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(12.dp))
                         if (clientConfig.isRawMode) {
                             Text(
