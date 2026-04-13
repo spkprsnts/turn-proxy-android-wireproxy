@@ -198,7 +198,7 @@ class AppUpdater(private val context: Context) {
 
     companion object {
         private const val RELEASES_URL =
-            "https://api.github.com/repos/spkprsnts/turn-proxy-android-wireproxy/releases/latest"
+            "https://api.github.com/repos/spkprsnts/WireTurn/releases/latest"
 
         fun isNewer(remote: String, current: String): Boolean {
             val r = remote.split(".").map { it.toIntOrNull() ?: 0 }
