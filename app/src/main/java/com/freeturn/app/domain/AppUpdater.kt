@@ -167,27 +167,11 @@ class AppUpdater(private val context: Context) {
     }
 
     private fun getWireproxyIfRunning(): java.net.Proxy? {
-        if (!com.freeturn.app.ProxyServiceState.isRunning.value) return null
+        val runningConfig = com.freeturn.app.WireproxyServiceState.runningConfig.value ?: return null
         if (com.freeturn.app.WireproxyServiceState.state.value != com.freeturn.app.viewmodel.WireproxyState.Running) return null
 
-        val configFile = File(context.filesDir, "wg.conf")
-        if (!configFile.exists()) return null
-
         return try {
-            var socksAddr = ""
-            var currentSection = ""
-            configFile.forEachLine { line ->
-                val trimmed = line.trim()
-                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                    currentSection = trimmed.substring(1, trimmed.length - 1).lowercase()
-                } else if (trimmed.contains("=") && currentSection == "socks5") {
-                    val parts = trimmed.split("=", limit = 2)
-                    if (parts[0].trim().lowercase() == "bindaddress") {
-                        socksAddr = parts[1].trim()
-                    }
-                }
-            }
-
+            val socksAddr = runningConfig.socks5BindAddress
             if (socksAddr.isNotBlank()) {
                 val parts = socksAddr.split(":")
                 if (parts.size == 2) {
